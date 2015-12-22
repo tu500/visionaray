@@ -12,6 +12,7 @@ variants = [
 
         Variant('cover',    '-DVSNRAY_ENABLE_COVER=ON'),
         Variant('examples', '-DVSNRAY_ENABLE_EXAMPLES=ON'),
+        Variant('noviewer', '-DVSNRAY_ENABLE_VIEWER=OFF'),
         Variant('viewer',   'viewer', vtype='target'),
 
         Variant('viewerf1', '-DVIEWER_PACKET_SIZE=1'),
@@ -36,7 +37,7 @@ test_list = specialize_variant_list(test_list, [
     ])
 
 test_list = specialize_variant_list(test_list, [
-    'cover+examples',
+    'cover+examples+noviewer',
     'viewer',
     ])
 
