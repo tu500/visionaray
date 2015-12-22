@@ -54,6 +54,11 @@ pprint(test_list)
 
 tests = variant_list_to_variant_tests(test_list, variants)
 
+import shutil
+import os.path
+if os.path.exists('/media/ramfs/test_build'):
+    shutil.rmtree('/media/ramfs/test_build')
+
 for t in tests:
     print('Running ' + t.name)
     t.run_test('test_build', '..')
