@@ -15,12 +15,23 @@ def slugify(value):
 
 class Variant():
 
-    def __init__(self, name, value, vtype='cl-option', foldername=None):
+    def __init__(self, name, cmake_flags=None, *args, make_targets=None, fpstest_binary=None, foldername=None):
 
         self.name = name
-        self.value = value
-        self.vtype = vtype
+        self.cmake_flags = cmake_flags
+        self.make_targets = make_targets
+        self.fpstest_binary = fpstest_binary
         self.foldername = foldername
+
+        if self.cmake_flags is None:
+            self.cmake_flags = []
+        if type(self.cmake_flags) == str:
+            self.cmake_flags = [self.cmake_flags]
+
+        if self.make_targets is None:
+            self.make_targets = []
+        if type(self.make_targets) == str:
+            self.make_targets = [self.make_targets]
 
         if foldername is None:
             self.foldername = slugify(name)

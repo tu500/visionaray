@@ -1,6 +1,7 @@
 from test import *
 from variants import *
 from pprint import pprint
+import os.path
 
 variants = [
         Variant('noavx',    '-DCMAKE_CXX_FLAGS=-std=c++11 -fabi-version=6'),
@@ -13,14 +14,13 @@ variants = [
         Variant('cover',    '-DVSNRAY_ENABLE_COVER=ON'),
         Variant('examples', '-DVSNRAY_ENABLE_EXAMPLES=ON'),
         Variant('noviewer', '-DVSNRAY_ENABLE_VIEWER=OFF'),
-        Variant('viewer',   'viewer', vtype='target'),
+        Variant('viewer',   make_targets='viewer'),
 
         Variant('viewerf1', '-DVIEWER_PACKET_SIZE=1'),
         Variant('viewerf4', '-DVIEWER_PACKET_SIZE=4'),
         Variant('viewerf8', '-DVIEWER_PACKET_SIZE=8'),
 
-        Variant('fpstest',  '-DVSNRAY_ENABLE_FPSTEST=ON'),
-        Variant('fps', None, vtype='fpstest'),
+        Variant('fps', '-DVSNRAY_ENABLE_FPSTEST=ON', fpstest_binary=os.path.join('src','fpstest','fpstest')),
 
         Variant('algo_simple',       '-DFPSTEST_ALGO=ALGO_SIMPLE'),
         Variant('algo_whitted',      '-DFPSTEST_ALGO=ALGO_WHITTED'),
@@ -72,7 +72,7 @@ fps_list = specialize_variant_list(fps_list, [
     ])
 
 fps_list = specialize_variant_list(fps_list, [
-    'fpstest+fps+noviewer',
+    'fps+noviewer',
     ])
 
 #test_list = extend_variant_list(test_list, [

@@ -9,15 +9,15 @@ import time
 
 class VariantTest():
 
-    def __init__(self, name, folder, cmake_flags, make_target=None):
+    def __init__(self, name, folder, cmake_flags, make_targets=None):
 
         self.name = name
         self.folder = folder
         self.cmake_flags = cmake_flags
-        self.make_target = make_target
+        self.make_targets = make_targets
 
-        if self.make_target is None:
-            self.make_target = 'all'
+        if self.make_targets is None:
+            self.make_targets = []
 
     def run_test(self, build_base_dir, project_base_dir):
         """
@@ -68,7 +68,7 @@ class VariantTest():
 
         start_time = time.time()
         child = subprocess.Popen(
-                ['make', '-j4', self.make_target],
+                ['make', '-j4'] + self.make_targets,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 cwd=self.working_dir,
@@ -96,10 +96,11 @@ class FPSTest(VariantTest):
 
     #TODO these two should be customizable
     test_file_path = os.path.abspath('../../teapot.obj')
-    binary_rel_path = os.path.join('src', 'fpstest', 'fpstest')
 
-    def __init__(self, name, folder, cmake_flags, make_target):
-        super(FPSTest, self).__init__(name, folder, cmake_flags, make_target)
+    def __init__(self, name, folder, cmake_flags, make_targets, fpstest_binary):
+        super(FPSTest, self).__init__(name, folder, cmake_flags, make_targets)
+
+        self.fpstest_binary = fpstest_binary
 
     def run_test(self, build_base_dir, project_base_dir):
 
@@ -115,7 +116,7 @@ class FPSTest(VariantTest):
 
     def _run_fpstest(self):
 
-        binary_path = os.path.abspath(os.path.join(self.working_dir, self.binary_rel_path))
+        binary_path = os.path.abspath(os.path.join(self.working_dir, self.fpstest_binary))
 
         child = subprocess.Popen(
                 [binary_path, self.test_file_path],
@@ -151,8 +152,9 @@ def variant_line_to_variant_test(vline, defined_variants):
 
     name = '+'.join(vline)
     folder = os.path.join(*vline)
-    flags = []
-    target = None
+    cmake_flags = []
+    make_targets = []
+    fpstest_binary = None
 
     for item in vline:
 
@@ -161,28 +163,21 @@ def variant_line_to_variant_test(vline, defined_variants):
         except KeyError:
             raise Exception('Variant with name {} not defined'.format(repr(item)))
 
-        if variant.vtype == 'cl-option':
-            flags.append(variant.value)
+        cmake_flags.extend(variant.cmake_flags)
 
-        elif variant.vtype == 'target':
+        make_targets.extend(variant.make_targets)
 
-            if target is not None:
-                raise Exception('Multiple targets configured in vline {}'.format(repr(vline)))
+        if variant.fpstest_binary is not None:
 
-            target = variant.value
+            if fpstest_binary is not None:
+                raise Exception('Multiple fpstest binaries configured in vline {}'.format(repr(vline)))
 
-        elif variant.vtype == 'fpstest':
+            fpstest_binary = variant.fpstest_binary
 
-            # TODO this is ugly
-            do_fpstest = True
+    if fpstest_binary:
+        return FPSTest(name, folder, cmake_flags, make_targets, fpstest_binary)
 
-        else:
-            raise Exception('Unknown value type {} in variant'.format(repr(variant.vtype)))
-
-    if do_fpstest:
-        return FPSTest(name, folder, flags, target)
-
-    return VariantTest(name, folder, flags, target)
+    return VariantTest(name, folder, cmake_flags, make_targets)
 
 def variant_list_to_variant_tests(vlist, defined_variants):
     return [variant_line_to_variant_test(l, defined_variants) for l in vlist]
