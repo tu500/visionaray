@@ -19,20 +19,38 @@ class VariantTest():
             self.make_target = 'all'
 
     def run_test(self, build_base_dir, project_base_dir):
+        """
+        build_base_dir: root dir of all test builds
+        project_base_dir: root dir of tested project (visionaray source tree)
+        """
+
+        self.build_base_dir = build_base_dir
+        self.project_base_dir = project_base_dir
 
         # create working dir
-        working_dir = os.path.join(build_base_dir, self.folder)
-        os.makedirs(working_dir, exist_ok=True)
+        # this will be the root dir of this test's cmake build
+        self.working_dir = os.path.join(build_base_dir, self.folder)
+        os.makedirs(self.working_dir, exist_ok=True)
 
         self.test_output = b''
 
-        # call cmake
+        if not self._call_cmake():
+            return False
+
+        if not self._call_make():
+            return False
+
+        self.test_passed = True
+        return True
+
+    def _call_cmake(self):
+
         start_time = time.time()
         child = subprocess.Popen(
-                ['cmake'] + self.cmake_flags + [os.path.abspath(project_base_dir)],
+                ['cmake'] + self.cmake_flags + [os.path.abspath(self.project_base_dir)],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
-                cwd=working_dir,
+                cwd=self.working_dir,
             )
 
         returncode = child.wait()
@@ -43,13 +61,16 @@ class VariantTest():
             self.test_passed = False
             return False
 
-        # call make
+        return True
+
+    def _call_make(self):
+
         start_time = time.time()
         child = subprocess.Popen(
                 ['make', '-j4', self.make_target],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
-                cwd=working_dir,
+                cwd=self.working_dir,
             )
 
         returncode = child.wait()
@@ -60,8 +81,14 @@ class VariantTest():
             self.test_passed = False
             return False
 
-        self.test_passed = True
         return True
+
+    def get_result_string(self):
+
+        if self.test_passed:
+            return 'Passed in {} / {} seconds'.format(self.cmake_time, self.make_time)
+        else:
+            return 'Failed'
 
 
 def variant_line_to_variant_test(vline, defined_variants):

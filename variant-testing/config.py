@@ -61,10 +61,6 @@ if os.path.exists('/media/ramfs/test_build'):
     shutil.rmtree('/media/ramfs/test_build')
 
 for t in tests:
-    print('Running ' + t.name)
-    t.run_test('test_build', '..')
-
-    if t.test_passed:
-        print('Passed {} in {} / {} seconds'.format(t.name, t.cmake_time, t.make_time))
-    else:
-        print('Failed ' + t.name)
+    print('Running {}: '.format(t.name), end='', flush=True)
+    t.run_test('/media/ramfs/test_build', '..')
+    print(t.get_result_string())
