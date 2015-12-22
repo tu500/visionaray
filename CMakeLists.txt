@@ -24,6 +24,7 @@ option(VSNRAY_ENABLE_COVER "Build OpenCOVER plugin" ON)
 option(VSNRAY_ENABLE_CUDA "Use CUDA, if available" ON)
 option(VSNRAY_ENABLE_EXAMPLES "Build the programming examples" OFF)
 option(VSNRAY_ENABLE_QT5 "Use Qt5, if available" OFF)
+option(VSNRAY_ENABLE_FPSTEST "Build the fpstest program" OFF)
 option(VSNRAY_ENABLE_VIEWER "Build the vsnray-viewer program" ON)
 
 #---------------------------------------------------------------------------------------------------

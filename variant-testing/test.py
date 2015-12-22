@@ -2,6 +2,7 @@
 
 import os
 import os.path
+import re
 import subprocess
 import time
 
@@ -91,6 +92,61 @@ class VariantTest():
             return 'Failed'
 
 
+class FPSTest(VariantTest):
+
+    #TODO these two should be customizable
+    test_file_path = os.path.abspath('../../teapot.obj')
+    binary_rel_path = os.path.join('src', 'fpstest', 'fpstest')
+
+    def __init__(self, name, folder, cmake_flags, make_target):
+        super(FPSTest, self).__init__(name, folder, cmake_flags, make_target)
+
+    def run_test(self, build_base_dir, project_base_dir):
+
+        # will set self.test_passed, but we will reset it
+        if not super(FPSTest, self).run_test(build_base_dir, project_base_dir):
+            return False
+
+        if not self._run_fpstest():
+            return False
+
+        self.test_passed = True
+        return True
+
+    def _run_fpstest(self):
+
+        binary_path = os.path.abspath(os.path.join(self.working_dir, self.binary_rel_path))
+
+        child = subprocess.Popen(
+                [binary_path, self.test_file_path],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                cwd=self.working_dir,
+            )
+
+        returncode = child.wait()
+        child_output = child.stdout.read()
+        self.test_output += child_output
+
+        match = re.match(r'FPS: (\d+\.\d+)', child_output.decode('utf-8'))
+
+        if returncode != 0 or not match:
+            self.test_passed = False
+            return False
+
+        self.fps_result = float(match.group(1))
+
+        return True
+
+    def get_result_string(self):
+
+        if self.test_passed:
+            return '{} FPS'.format(self.fps_result)
+        else:
+            return 'Failed'
+
+
+
 def variant_line_to_variant_test(vline, defined_variants):
 
     name = '+'.join(vline)
@@ -115,8 +171,16 @@ def variant_line_to_variant_test(vline, defined_variants):
 
             target = variant.value
 
+        elif variant.vtype == 'fpstest':
+
+            # TODO this is ugly
+            do_fpstest = True
+
         else:
             raise Exception('Unknown value type {} in variant'.format(repr(variant.vtype)))
+
+    if do_fpstest:
+        return FPSTest(name, folder, flags, target)
 
     return VariantTest(name, folder, flags, target)
 

@@ -8,6 +8,10 @@ if(VSNRAY_ENABLE_EXAMPLES)
 add_subdirectory(examples)
 endif()
 
+if(VSNRAY_ENABLE_FPSTEST)
+add_subdirectory(fpstest)
+endif()
+
 if(VSNRAY_ENABLE_VIEWER)
 add_subdirectory(viewer)
 endif()
