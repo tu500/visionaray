@@ -81,6 +81,8 @@ def specialize_variant_list(vlist, new_variants):
 
     return out
 
+# TODO this one has the problem of build directory collision
+# i.e. projects will be built in 'original_dir' and 'original_dir/extension'
 def extend_variant_list(vlist, new_variants):
 
     out = []
