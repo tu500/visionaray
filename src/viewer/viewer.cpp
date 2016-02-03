@@ -45,7 +45,7 @@
 #include <visionaray/point_light.h>
 #include <visionaray/scheduler.h>
 
-#if defined(__MINGW32__) || defined(__MINGW64__)
+#if USE_TBB
 #include <visionaray/experimental/tbb_sched.h>
 #endif
 
@@ -192,7 +192,7 @@ struct renderer : viewer_type
     thrust::device_vector<material_type>    device_materials;
 #endif
 
-#if defined(__MINGW32__) || defined(__MINGW64__)
+#if USE_TBB
     tbb_sched<ray_type_cpu>     host_sched;
 #else
     tiled_sched<ray_type_cpu>   host_sched;

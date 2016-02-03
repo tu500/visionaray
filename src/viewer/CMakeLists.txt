@@ -30,6 +30,9 @@ if (NOT APPLE AND NOT WIN32)
 visionaray_use_package(PTHREAD)
 endif()
 
+find_package(TBB)
+visionaray_use_package(TBB)
+
 visionaray_link_libraries(visionaray)
 visionaray_link_libraries(visionaray_common)
 
