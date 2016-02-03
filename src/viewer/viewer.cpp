@@ -78,9 +78,14 @@ using viewer_type = viewer_glut;
 struct renderer : viewer_type
 {
 
-//  using scalar_type_cpu           = float;
+#if VIEWER_PACKET_SIZE == 1
+    using scalar_type_cpu           = float;
+#elif VIEWER_PACKET_SIZE == 4
     using scalar_type_cpu           = simd::float4;
-//  using scalar_type_cpu           = simd::float8;
+#elif VIEWER_PACKET_SIZE == 8
+    using scalar_type_cpu           = simd::float8;
+#endif
+
     using scalar_type_gpu           = float;
     using ray_type_cpu              = basic_ray<scalar_type_cpu>;
     using ray_type_gpu              = basic_ray<scalar_type_gpu>;

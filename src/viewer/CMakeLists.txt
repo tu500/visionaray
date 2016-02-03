@@ -47,6 +47,9 @@ else()
     )
 endif()
 
+set(VIEWER_PACKET_SIZE 1 CACHE INTEGER "Number of simultaneous rays to be used in the viewer")
+add_definitions(-DVIEWER_PACKET_SIZE=${VIEWER_PACKET_SIZE})
+
 
 #--------------------------------------------------------------------------------------------------
 # Add viewer target
