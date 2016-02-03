@@ -64,7 +64,7 @@ public:
         ++count_;
         double elapsed = timer_.elapsed();
 
-        if (elapsed > 0.5/*sec*/)
+        if (elapsed > 5.0/*sec*/)
         {
             fps_ = count_ / elapsed;
             timer_.reset();

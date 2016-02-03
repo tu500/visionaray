@@ -97,7 +97,7 @@ tbb_sched<ray_type>             scheduler;
 
 render_target_type              rt;
 camera                          cam;
-visionaray::frame_counter       fps_counter;
+visionaray::frame_counter       fps_counter; // TODO: make frame_counter interval configurable
 
 
 
