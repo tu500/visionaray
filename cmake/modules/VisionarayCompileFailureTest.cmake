@@ -10,7 +10,7 @@
 # visionaray_test_compile_success can be used to test a reference code.
 
 macro(visionaray_test_compile_failure FILENAME TESTNAME)
-    add_executable(cft_${TESTNAME} ${FILENAME})
+    visionaray_add_executable(cft_${TESTNAME} ${FILENAME})
     set_target_properties(cft_${TESTNAME} PROPERTIES
                           EXCLUDE_FROM_ALL TRUE
                           EXCLUDE_FROM_DEFAULT_BUILD TRUE)
@@ -22,7 +22,7 @@ macro(visionaray_test_compile_failure FILENAME TESTNAME)
 endmacro()
 
 macro(visionaray_test_compile_success FILENAME TESTNAME)
-    add_executable(cft_${TESTNAME} ${FILENAME})
+    visionaray_add_executable(cft_${TESTNAME} ${FILENAME})
     set_target_properties(cft_${TESTNAME} PROPERTIES
                           EXCLUDE_FROM_ALL TRUE
                           EXCLUDE_FROM_DEFAULT_BUILD TRUE)

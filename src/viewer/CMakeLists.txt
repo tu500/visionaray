@@ -66,3 +66,13 @@ install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/viewer
     DESTINATION bin
     RENAME vsnray-viewer
 )
+
+
+#--------------------------------------------------------------------------------------------------
+# Full spectrum test
+#
+
+
+if(NOT (CUDA_FOUND AND VSNRAY_ENABLE_CUDA))
+    visionaray_test_compile_success(viewer.cpp viewer_full_spectrum VSNRAY_SPECTRUM_RGB=0)
+endif()

@@ -14,7 +14,9 @@
 // If set to 0, Visionaray stores sampled spectral power distributions in class spectrum
 //
 
+#ifndef VSNRAY_SPECTRUM_RGB
 #define VSNRAY_SPECTRUM_RGB 1
+#endif
 
 namespace visionaray
 {
