@@ -52,10 +52,31 @@ endif()
 # Add viewer target
 #
 
+visionaray_add_executable(precompile-header precompiled.cpp main.cpp empty.cpp)
+
+add_custom_command(TARGET precompile-header
+    PRE_LINK
+    COMMAND cp ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/precompile-header.dir/precompiled.cpp.o ${PROJECT_SOURCE_DIR}/src/viewer/precompiled.h.gch
+#    COMMAND cp ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/precompile-header.dir/precompiled.cpp.o ${CMAKE_CURRENT_BINARY_DIR}/precompiled.h.gch
+    COMMAND cp ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/precompile-header.dir/empty.cpp.o ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/precompile-header.dir/precompiled.cpp.o
+)
+
+#add_custom_command(OUTPUT precompiled.h.gch
+#    DEPENDS precompile-header
+#    IMPLICIT_DEPENDS c++ precompiled.h
+#)
+
+set_source_files_properties(precompiled.cpp PROPERTIES COMPILE_FLAGS "-x c++-header")
+
 visionaray_add_executable(viewer
     ${VIEWER_SOURCES}
     ${VIEWER_CUDA_SOURCES}
+#    precompiled.h.gch
 )
+
+add_dependencies(viewer precompile-header)
+
+target_compile_options(viewer PUBLIC -H)
 
 
 #--------------------------------------------------------------------------------------------------
