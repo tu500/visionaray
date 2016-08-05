@@ -349,6 +349,22 @@ VSNRAY_FORCE_INLINE float4 sin(float4 const& x)
     return float4( std::sin(tmp[0]), std::sin(tmp[1]), std::sin(tmp[2]), std::sin(tmp[3]) );
 }
 
+VSNRAY_FORCE_INLINE float4 acos(float4 const& x)
+{
+    VSNRAY_ALIGN(16) float tmp[4];
+    store(tmp, x);
+
+    return float4( std::acos(tmp[0]), std::acos(tmp[1]), std::acos(tmp[2]), std::acos(tmp[3]) );
+}
+
+VSNRAY_FORCE_INLINE float4 asin(float4 const& x)
+{
+    VSNRAY_ALIGN(16) float tmp[4];
+    store(tmp, x);
+
+    return float4( std::asin(tmp[0]), std::asin(tmp[1]), std::asin(tmp[2]), std::asin(tmp[3]) );
+}
+
 #if VSNRAY_SIMD_ISA >= VSNRAY_SIMD_ISA_AVX
 
 // TODO: consolidate stuff with float4 (template)
@@ -372,6 +388,28 @@ VSNRAY_FORCE_INLINE float8 sin(float8 const& x)
     return float8(
         std::sin(tmp[0]), std::sin(tmp[1]), std::sin(tmp[2]), std::sin(tmp[3]),
         std::sin(tmp[4]), std::sin(tmp[5]), std::sin(tmp[6]), std::sin(tmp[7])
+        );
+}
+
+VSNRAY_FORCE_INLINE float8 acos(float8 const& x)
+{
+    VSNRAY_ALIGN(32) float tmp[8];
+    store(tmp, x);
+
+    return float8(
+        std::acos(tmp[0]), std::acos(tmp[1]), std::acos(tmp[2]), std::acos(tmp[3]),
+        std::acos(tmp[4]), std::acos(tmp[5]), std::acos(tmp[6]), std::acos(tmp[7])
+        );
+}
+
+VSNRAY_FORCE_INLINE float8 asin(float8 const& x)
+{
+    VSNRAY_ALIGN(32) float tmp[8];
+    store(tmp, x);
+
+    return float8(
+        std::asin(tmp[0]), std::asin(tmp[1]), std::asin(tmp[2]), std::asin(tmp[3]),
+        std::asin(tmp[4]), std::asin(tmp[5]), std::asin(tmp[6]), std::asin(tmp[7])
         );
 }
 
