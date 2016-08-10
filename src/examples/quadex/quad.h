@@ -5,6 +5,7 @@
 #include <iostream>
 
 #include <visionaray/math/math.h>
+#include <visionaray/intersector.h>
 
 namespace visionaray
 {
@@ -603,6 +604,66 @@ hit_record<R, primitive<unsigned>> intersect(R const& ray, basic_quad<float> con
     //return detail::intersect_project_2D(ray, quad);
     //return detail::intersect_uv(ray, quad);
 }
+
+struct quad_intersector_mt_bl_uv : basic_intersector<quad_intersector_mt_bl_uv>
+{
+    using basic_intersector<quad_intersector_mt_bl_uv>::operator();
+
+    template <typename R, typename S>
+    auto operator()(
+            R const& ray,
+            basic_quad<S> const& quad
+            )
+        -> decltype( detail::intersect_mt_bl_uv(ray, quad) )
+    {
+        return detail::intersect_mt_bl_uv(ray, quad);
+    }
+};
+
+struct quad_intersector_pluecker : basic_intersector<quad_intersector_pluecker>
+{
+    using basic_intersector<quad_intersector_pluecker>::operator();
+
+    template <typename R, typename S>
+    auto operator()(
+            R const& ray,
+            basic_quad<S> const& quad
+            )
+        -> decltype( detail::intersect_pluecker(ray, quad) )
+    {
+        return detail::intersect_pluecker(ray, quad);
+    }
+};
+
+struct quad_intersector_project_2D : basic_intersector<quad_intersector_project_2D>
+{
+    using basic_intersector<quad_intersector_project_2D>::operator();
+
+    template <typename R, typename S>
+    auto operator()(
+            R const& ray,
+            basic_quad<S> const& quad
+            )
+        -> decltype( detail::intersect_project_2D(ray, quad) )
+    {
+        return detail::intersect_project_2D(ray, quad);
+    }
+};
+
+struct quad_intersector_uv : basic_intersector<quad_intersector_uv>
+{
+    using basic_intersector<quad_intersector_uv>::operator();
+
+    template <typename R, typename S>
+    auto operator()(
+            R const& ray,
+            basic_quad<S> const& quad
+            )
+        -> decltype( detail::intersect_uv(ray, quad) )
+    {
+        return detail::intersect_uv(ray, quad);
+    }
+};
 
 
 template <typename HR, typename T>

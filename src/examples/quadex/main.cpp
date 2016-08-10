@@ -3,6 +3,9 @@
 
 #include <cstring> // memset
 #include <memory>
+#include <random>
+#include <cassert>
+#include <algorithm>
 
 #include <GL/glew.h>
 
@@ -183,12 +186,178 @@ void renderer::on_resize(int w, int h)
 }
 
 
+template <typename T>
+basic_quad<T> make_quad(
+        vector<3, T> v1,
+        vector<3, T> v2,
+        vector<3, T> v3,
+        vector<3, T> v4
+        )
+{
+    basic_quad<T> q;
+    q.v1 = v1;
+    q.v2 = v2;
+    q.v3 = v3;
+    q.v4 = v4;
+    q.prim_id = 0;
+    q.geom_id = 0;
+    return q;
+}
+
+
+template <typename S>
+struct benchmark_impl
+{
+    template <typename V1, typename V2>
+    void pack_rays(V1& rays_cpu, V2 const& rays)
+    {
+        assert(rays.size() % 8 == 0);
+
+        const size_t packet_size = simd::num_elements<S>::value;
+
+        for (size_t i=0; i<rays.size()/packet_size; i++)
+        {
+            std::array<basic_ray<float>, packet_size> ra;
+
+            for (size_t e=0; e<packet_size; ++e)
+            {
+                ra[e] = rays[i*packet_size + e];
+            }
+
+            rays_cpu.push_back(simd::pack(ra));
+        }
+    }
+};
+
+template <>
+struct benchmark_impl <float>
+{
+    template <typename V1, typename V2>
+    void pack_rays(V1& rays_cpu, V2 const& rays)
+    {
+        rays_cpu.resize(rays.size());
+        std::copy(rays.cbegin(), rays.cend(), rays_cpu.begin());
+    }
+};
+
+template <typename S>
+struct benchmark
+{
+    typedef basic_quad<float> quad_type;
+    typedef basic_ray<float> ray_type;
+    typedef basic_ray<S> ray_type_cpu;
+
+    aligned_vector<quad_type, 32> quads;
+    aligned_vector<ray_type, 32> rays;
+
+    aligned_vector<basic_ray<S>, 32> rays_cpu;
+
+
+
+    const size_t quad_count = 1000;
+    const size_t ray_count = 100000;
+
+
+    typedef std::default_random_engine rand_engine;
+    typedef std::uniform_real_distribution<float> uniform_dist;
+
+    rand_engine  rng;
+    uniform_dist dist;
+
+    benchmark()
+        : rng(0), dist(0, 1)
+    {
+        generate_quads();
+        generate_rays();
+    }
+
+    void generate_quads()
+    {
+        for (size_t i=0; i<quad_count; i++)
+        {
+            vec3 normal = normalize(vec3(dist(rng), dist(rng), dist(rng)));
+
+            auto w = normal;
+            auto v = select(
+                    abs(w.x) > abs(w.y),
+                    normalize( vec3(-w.z, 0.f, w.x) ),
+                    normalize( vec3(0.f, w.z, -w.y) )
+                    );
+            auto u = cross(v, w);
+
+            //vec3 center = vec3(vec3(dist(rng), dist(rng), dist(rng)));
+            vec3 center = vec3(0.f);
+
+            quad_type quad = make_quad(
+                    u * dist(rng) + center,
+                    v * dist(rng) + center,
+                    -u * dist(rng) + center,
+                    -v * dist(rng) + center
+                    );
+            quads.push_back(quad);
+        }
+    }
+
+    void generate_rays()
+    {
+        for (size_t i=0; i<ray_count; i++)
+        {
+            ray r;
+
+            vec3 origin(0.f, 0.f, 4.f);
+            vec3 dir = normalize(vec3(dist(rng), dist(rng), 0.f) - origin);
+
+            r.ori = origin;
+            r.dir = dir;
+
+            rays.push_back(r);
+        }
+    }
+
+    void init()
+    {
+        benchmark_impl<S> impl;
+        impl.pack_rays(rays_cpu, rays);
+    }
+
+
+    void operator() ()
+    {
+        run_test<quad_intersector_mt_bl_uv>("mt bl uv");
+        run_test<quad_intersector_pluecker>("pluecker");
+        run_test<quad_intersector_project_2D>("project 2d");
+        run_test<quad_intersector_uv>("uv");
+    }
+
+    template <typename intersector>
+    void run_test(std::string name)
+    {
+        intersector i;
+
+        timer t;
+
+        for (auto &r: rays_cpu)
+        {
+            volatile auto hr = closest_hit(r, quads.begin(), quads.end(), i);
+        }
+
+        volatile auto elapsed = t.elapsed();
+
+        std::cout << name << " elapsed time: " << elapsed << '\n';
+    }
+};
+
 //-------------------------------------------------------------------------------------------------
 // Main function, performs initialization
 //
 
 int main(int argc, char** argv)
 {
+    benchmark<simd::float8> b;
+    b.init();
+    b();
+    return 0;
+
     renderer rend;
 
     try
