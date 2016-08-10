@@ -66,7 +66,7 @@ struct renderer : viewer_type
     bool                                        render_bvh = false;
 
 
-    void make_sphere()
+    void make_sphere(vector<3, float> center=vector<3, float>(0.f), float radius=1.f)
     {
         int prim_id = 0;
         const int resolution = 20;
@@ -97,10 +97,10 @@ struct renderer : viewer_type
 
                 // quad on the upper hemisphere
                 snex::quad_prim<float> s(
-                        xy_pos1 * radius1 + z_pos1,
-                        xy_pos2 * radius1 + z_pos1,
-                        xy_pos1 * radius2 + z_pos2,
-                        xy_pos2 * radius2 + z_pos2);
+                        (xy_pos1 * radius1 + z_pos1) * radius + center,
+                        (xy_pos2 * radius1 + z_pos1) * radius + center,
+                        (xy_pos1 * radius2 + z_pos2) * radius + center,
+                        (xy_pos2 * radius2 + z_pos2) * radius + center);
                 s.prim_id = prim_id++;
                 s.geom_id = 0;
                 quads.push_back(s);
@@ -113,10 +113,10 @@ struct renderer : viewer_type
 
                 // quad on the lower hemisphere
                 snex::quad_prim<float> s_neg(
-                        xy_pos1 * radius1 - z_pos1,
-                        xy_pos1 * radius2 - z_pos2,
-                        xy_pos2 * radius1 - z_pos1,
-                        xy_pos2 * radius2 - z_pos2);
+                        (xy_pos1 * radius1 - z_pos1) * radius + center,
+                        (xy_pos1 * radius2 - z_pos2) * radius + center,
+                        (xy_pos2 * radius1 - z_pos1) * radius + center,
+                        (xy_pos2 * radius2 - z_pos2) * radius + center);
                 s_neg.prim_id = prim_id++;
                 s_neg.geom_id = 0;
                 quads.push_back(s_neg);
