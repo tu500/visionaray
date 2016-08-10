@@ -93,6 +93,19 @@ vector<2, T> remove_at_index(vector<3, T> const& v, I const& index)
     return simd::pack(tmp).xy();
 }
 
+VSNRAY_FUNC
+vec2 remove_at_index(vec3 const& v, int const& index)
+{
+    if (index == 0)
+        return vec2(v.y, v.z);
+
+    if (index == 1)
+        return vec2(v.x, v.z);
+
+    if (index == 2)
+        return vec2(v.x, v.y);
+}
+
 
 // SIMD max_index for vec3 --------------------------------
 
@@ -284,10 +297,10 @@ hit_record<R, primitive<unsigned>> intersect_pluecker(R const& ray, basic_quad<f
     vector<6, T> e4(quad.v4 - quad.v1, cross(quad.v4, quad.v1));
     vector<6, T> r(cross(ray.dir, ray.ori), ray.dir);
 
-    T s1 = simd::copysign(T(1.0), dot(e1, r));
-    T s2 = simd::copysign(T(1.0), dot(e2, r));
-    T s3 = simd::copysign(T(1.0), dot(e3, r));
-    T s4 = simd::copysign(T(1.0), dot(e4, r));
+    T s1 = copysign(T(1.0), dot(e1, r));
+    T s2 = copysign(T(1.0), dot(e2, r));
+    T s3 = copysign(T(1.0), dot(e3, r));
+    T s4 = copysign(T(1.0), dot(e4, r));
 
     result.hit = s1 == s2 && s1 == s3 && s1 == s4;
 
