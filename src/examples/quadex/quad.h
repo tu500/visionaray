@@ -76,7 +76,6 @@ vector<2, T> remove_at_index(vector<3, T> const& v, I const& index)
     int_array idx;
     store(idx, index);
 
-    // Move max element of each vector to back
     for (size_t i = 0; i < tmp.size(); ++i)
     {
         auto& vv = tmp[i];
@@ -430,7 +429,7 @@ hit_record<R, primitive<unsigned>> intersect_uv(R const& ray, basic_quad<float> 
     T t = select(
             div != T(0.0),
             dot(v1 - ray.ori, n) / div,
-            t
+            T(-1.0)
             );
 
     result.hit = div != T(0.0) && t >= T(0.0);
@@ -562,7 +561,7 @@ inline hit_record<basic_ray<T>, primitive<unsigned>> intersect_mt_bl_uv(
         T D = B * B - 4.0 * A * C;
         T Q = -0.5 * (B + copysign(sqrt(D), B));
 
-        T u = Q / A;
+        u = Q / A;
         u = select(u < 0.0 || u > 1.0, C / Q, u);
         v = b2 / (u * (v4_y - 1.0) + 1.0);
     }
