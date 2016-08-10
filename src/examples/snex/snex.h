@@ -182,7 +182,7 @@ inline hit_record<basic_ray<T>, primitive<unsigned>> intersect(
         T D = B * B - 4.0 * A * C;
         T Q = -0.5 * (B + copysign(sqrt(D), B));
 
-        T u = Q / A;
+        u = Q / A;
         u = select(u < 0.0 || u > 1.0, C / Q, u);
         v = b2 / (u * (v4.y - 1.0) + 1.0);
     }
