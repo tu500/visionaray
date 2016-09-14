@@ -22,6 +22,23 @@ public:
 
 public:
 
+    // vertex ordering:
+    //
+    //    v3
+    //       x
+    //       | \
+    //       |   \
+    //       |     \
+    //       |       \
+    //       |         \
+    //       |           x  v4
+    //       |           |
+    //       |           |
+    //       |           |
+    //       |           |
+    //       x-----------x
+    //    v1                v2
+    //
     MATH_FUNC quad_prim() = default;
     MATH_FUNC quad_prim(
             vector<3, T> const& v1,
@@ -33,6 +50,18 @@ public:
         , e1(v2-v1)
         , e2(v3-v1)
     {
+        // if this quad should be degenerated to a triangle, make sure that v3 == v4
+        // v2 == v4 would also be possible, but would need additional checks
+        // and a rewrite of the following code
+
+        // edge case, degenerated quad
+        if (v3 == v4)
+        {
+            // ensure this quad is exactly a triangle
+            this->v4= vector<2, T>(0., 1.);
+            return;
+        }
+
         // calculate (u,v)-coordinates of the 4th vector relative to the triangle (v1, e1, e2)
 
         vec_type d = v4-v1;
@@ -54,10 +83,54 @@ public:
     vector<2, scalar_type> v4;
 };
 
+// need to reorder vertices for degenerated quads
+//
+// vertex ordering:
+//
+//    v4
+//       x
+//       | \
+//       |   \
+//       |     \
+//       |       \
+//       |         \
+//       |           x  v3
+//       |           |
+//       |           |
+//       |           |
+//       |           |
+//       x-----------x
+//    v1                v2
+//
+quad_prim<float> make_quad(
+            vector<3, float> const& v1,
+            vector<3, float> const& v2,
+            vector<3, float> const& v3,
+            vector<3, float> const& v4,
+            float epsilon=0.01f
+        )
+{
+    // ensure degenerated quads are exactly a triangles and the matching
+    // vertices are v3 and v4
+    if (norm(v1-v2) < epsilon)
+        return quad_prim<float>(v3, v4, v2, v2);
+    else if (norm(v2-v3) < epsilon)
+        return quad_prim<float>(v4, v1, v3, v3);
+    else if (norm(v3-v4) < epsilon)
+        return quad_prim<float>(v1, v2, v4, v4);
+    else if (norm(v4-v1) < epsilon)
+        return quad_prim<float>(v2, v3, v1, v1);
+
+    else
+        return quad_prim<float>(v1, v2, v4, v3);
 }
+
+}
+
 
 namespace visionaray
 {
+
 
 template <typename T>
 MATH_FUNC
@@ -150,7 +223,7 @@ inline hit_record<basic_ray<T>, primitive<unsigned>> intersect(
     // (b1,b2) are (u,v)-coordinates (relative to the triangle (v1,e1,e2)) of
     // the intersection point - check if they lie inside quad
 
-    result.hit &= ( b2 <= ((v4.y-1.0) / v4.x) * b1 + 1.0 );
+    result.hit &= ( b2 <= ((v4.y-1.0) / v4.x) * b1 + 1.0 ) || v4.x == 0.0;
     result.hit &= ( b1 <= ((v4.x-1.0) / v4.y) * b2 + 1.0 );
 
     if ( !any(result.hit) )
@@ -233,7 +306,12 @@ inline U slerp(
     // angle between p1, p2
     auto w = acos(dot(p1, p2));
 
-    return (sin((1 - t) * w) * v1 + sin(t * w) * v2) / sin(w);
+    // edge case
+    auto average = (v1 + v2) * U(0.5);
+
+    auto interpolated = (sin((S(1.) - t) * w) * v1 + sin(t * w) * v2) / sin(w);
+
+    return select(w == S(0.), average, interpolated);
 }
 
 template <typename Normals, typename HR, typename T>
@@ -253,16 +331,17 @@ inline auto get_shading_normal(
 
 //    return (1-hr.u) * (1-hr.v) * v1
 //         + hr.u     * (1-hr.v) * v2
-//         + (1-hr.u) * hr.v     * v3
-//         + hr.u     * hr.v     * v4;
+//         + hr.u     * hr.v     * v3
+//         + (1-hr.u) * hr.v     * v4;
 
     auto a = slerp(v1, v2, v1, v2, hr.u);
-    auto b = slerp(v3, v4, v3, v4, hr.u);
+    auto b = slerp(v4, v3, v4, v3, hr.u);
 
     auto r = slerp(a, b, a, b, hr.v);
 
     return r;
 }
+
 
 template <typename T>
 struct num_vertices<snex::quad_prim<T>>

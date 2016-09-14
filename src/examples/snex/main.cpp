@@ -73,7 +73,7 @@ struct renderer : viewer_type
 
         for (int i = 0; i < resolution; ++i) // longitude
         {
-            for (int j = 0; j < resolution/4 - 1; ++j) // latitude
+            for (int j = 0; j < resolution/4; ++j) // latitude
             {
                 // position in the xy plane (on the unit circle)
                 vec3 xy_pos1 = vec3(
@@ -89,41 +89,41 @@ struct renderer : viewer_type
                 vec3 z_pos1 = vec3(0, 0, sin(2.f * constants::pi<float>() * j / resolution));
                 vec3 z_pos2 = vec3(0, 0, sin(2.f * constants::pi<float>() * (j+1) / resolution));
 
-                // the radius of the latitudianl circle
+                // the radius of the latitudinal circle
                 // (the sphere intersected with the xy-plane at height Z_pos)
                 float radius1 = cos(2.f * constants::pi<float>() * j / resolution);
                 float radius2 = cos(2.f * constants::pi<float>() * (j+1) / resolution);
 
 
                 // quad on the upper hemisphere
-                snex::quad_prim<float> s(
+                snex::quad_prim<float> s = snex::make_quad(
                         (xy_pos1 * radius1 + z_pos1) * radius + center,
                         (xy_pos2 * radius1 + z_pos1) * radius + center,
-                        (xy_pos1 * radius2 + z_pos2) * radius + center,
-                        (xy_pos2 * radius2 + z_pos2) * radius + center);
+                        (xy_pos2 * radius2 + z_pos2) * radius + center,
+                        (xy_pos1 * radius2 + z_pos2) * radius + center);
                 s.prim_id = prim_id++;
                 s.geom_id = 0;
                 quads.push_back(s);
 
                 normals.push_back(xy_pos1 * radius1 + z_pos1);
                 normals.push_back(xy_pos2 * radius1 + z_pos1);
-                normals.push_back(xy_pos1 * radius2 + z_pos2);
                 normals.push_back(xy_pos2 * radius2 + z_pos2);
+                normals.push_back(xy_pos1 * radius2 + z_pos2);
 
 
                 // quad on the lower hemisphere
-                snex::quad_prim<float> s_neg(
+                snex::quad_prim<float> s_neg = snex::make_quad(
+                        (xy_pos2 * radius1 - z_pos1) * radius + center,
                         (xy_pos1 * radius1 - z_pos1) * radius + center,
                         (xy_pos1 * radius2 - z_pos2) * radius + center,
-                        (xy_pos2 * radius1 - z_pos1) * radius + center,
                         (xy_pos2 * radius2 - z_pos2) * radius + center);
                 s_neg.prim_id = prim_id++;
                 s_neg.geom_id = 0;
                 quads.push_back(s_neg);
 
+                normals.push_back(xy_pos2 * radius1 - z_pos1);
                 normals.push_back(xy_pos1 * radius1 - z_pos1);
                 normals.push_back(xy_pos1 * radius2 - z_pos2);
-                normals.push_back(xy_pos2 * radius1 - z_pos1);
                 normals.push_back(xy_pos2 * radius2 - z_pos2);
             }
         }
