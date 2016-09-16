@@ -24,11 +24,15 @@
 
 #include <visionaray/detail/render_bvh.h>
 
+#include "basic_quad.h"
 #include "snex.h"
 
 using namespace visionaray;
 
 using viewer_type = viewer_glut;
+
+//using quad_type = snex::quad_prim<float>;
+using quad_type = snex::basic_quad<float>;
 
 
 //-------------------------------------------------------------------------------------------------
@@ -57,8 +61,8 @@ struct renderer : viewer_type
 
     // rendering data
 
-    index_bvh<snex::quad_prim<float>>           bvh;
-    aligned_vector<snex::quad_prim<float>>      quads;
+    index_bvh<quad_type>                        bvh;
+    aligned_vector<quad_type>                   quads;
     aligned_vector<vec3>                        normals;
     aligned_vector<plastic<float>>              materials;
 
@@ -96,7 +100,7 @@ struct renderer : viewer_type
 
 
                 // quad on the upper hemisphere
-                snex::quad_prim<float> s = snex::make_quad(
+                quad_type s = quad_type::make_quad(
                         (xy_pos1 * radius1 + z_pos1) * radius + center,
                         (xy_pos2 * radius1 + z_pos1) * radius + center,
                         (xy_pos2 * radius2 + z_pos2) * radius + center,
@@ -112,7 +116,7 @@ struct renderer : viewer_type
 
 
                 // quad on the lower hemisphere
-                snex::quad_prim<float> s_neg = snex::make_quad(
+                quad_type s_neg = quad_type::make_quad(
                         (xy_pos2 * radius1 - z_pos1) * radius + center,
                         (xy_pos1 * radius1 - z_pos1) * radius + center,
                         (xy_pos1 * radius2 - z_pos2) * radius + center,
@@ -138,7 +142,7 @@ struct renderer : viewer_type
         m.set_specular_exp( 60.f );
         materials.push_back(m);
 
-        bvh = build<index_bvh<snex::quad_prim<float>>>(quads.data(), quads.size());
+        bvh = build<index_bvh<quad_type>>(quads.data(), quads.size());
     }
 
 
@@ -186,7 +190,7 @@ void renderer::on_display()
     aligned_vector<point_light<float>> lights;
     lights.push_back(light);
 
-    aligned_vector<index_bvh<snex::quad_prim<float>>::bvh_ref> primitives;
+    aligned_vector<index_bvh<quad_type>::bvh_ref> primitives;
     primitives.push_back(bvh.ref());
 
     auto kparams = make_kernel_params(

@@ -81,49 +81,49 @@ public:
     vec_type e1;
     vec_type e2;
     vector<2, scalar_type> v4;
+
+    // need to reorder vertices for degenerated quads
+    //
+    // vertex ordering:
+    //
+    //    v4
+    //       x
+    //       | \
+    //       |   \
+    //       |     \
+    //       |       \
+    //       |         \
+    //       |           x  v3
+    //       |           |
+    //       |           |
+    //       |           |
+    //       |           |
+    //       x-----------x
+    //    v1                v2
+    //
+    static quad_prim<float> make_quad(
+                vector<3, float> const& v1,
+                vector<3, float> const& v2,
+                vector<3, float> const& v3,
+                vector<3, float> const& v4,
+                float epsilon=0.01f
+            )
+    {
+        // ensure degenerated quads are exactly a triangles and the matching
+        // vertices are v3 and v4
+        if (norm(v1-v2) < epsilon)
+            return quad_prim<float>(v3, v4, v2, v2);
+        else if (norm(v2-v3) < epsilon)
+            return quad_prim<float>(v4, v1, v3, v3);
+        else if (norm(v3-v4) < epsilon)
+            return quad_prim<float>(v1, v2, v4, v4);
+        else if (norm(v4-v1) < epsilon)
+            return quad_prim<float>(v2, v3, v1, v1);
+
+        else
+            return quad_prim<float>(v1, v2, v4, v3);
+    }
 };
-
-// need to reorder vertices for degenerated quads
-//
-// vertex ordering:
-//
-//    v4
-//       x
-//       | \
-//       |   \
-//       |     \
-//       |       \
-//       |         \
-//       |           x  v3
-//       |           |
-//       |           |
-//       |           |
-//       |           |
-//       x-----------x
-//    v1                v2
-//
-quad_prim<float> make_quad(
-            vector<3, float> const& v1,
-            vector<3, float> const& v2,
-            vector<3, float> const& v3,
-            vector<3, float> const& v4,
-            float epsilon=0.01f
-        )
-{
-    // ensure degenerated quads are exactly a triangles and the matching
-    // vertices are v3 and v4
-    if (norm(v1-v2) < epsilon)
-        return quad_prim<float>(v3, v4, v2, v2);
-    else if (norm(v2-v3) < epsilon)
-        return quad_prim<float>(v4, v1, v3, v3);
-    else if (norm(v3-v4) < epsilon)
-        return quad_prim<float>(v1, v2, v4, v4);
-    else if (norm(v4-v1) < epsilon)
-        return quad_prim<float>(v2, v3, v1, v1);
-
-    else
-        return quad_prim<float>(v1, v2, v4, v3);
-}
 
 }
 
@@ -291,27 +291,6 @@ inline auto get_normal(
     VSNRAY_UNUSED(normals);
 
     return get_normal(hr, prim);
-}
-
-template <typename T, typename U, typename S>
-VSNRAY_FUNC
-inline U slerp(
-        T p1,
-        T p2,
-        U v1,
-        U v2,
-        S t
-        )
-{
-    // angle between p1, p2
-    auto w = acos(dot(p1, p2));
-
-    // edge case
-    auto average = (v1 + v2) * U(0.5);
-
-    auto interpolated = (sin((S(1.) - t) * w) * v1 + sin(t * w) * v2) / sin(w);
-
-    return select(w == S(0.), average, interpolated);
 }
 
 template <typename Normals, typename HR, typename T>
