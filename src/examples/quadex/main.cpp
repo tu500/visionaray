@@ -27,6 +27,8 @@
 #include <common/timer.h>
 #include <common/viewer_glut.h>
 
+#include <thrust/device_vector.h>
+
 #include "quad.h"
 
 using namespace visionaray;
@@ -255,7 +257,7 @@ struct benchmark
 
 
     const size_t quad_count = 1000;
-    const size_t ray_count = 100000;
+    const size_t ray_count = (1<<20);
 
 
     typedef std::default_random_engine rand_engine;
@@ -345,7 +347,51 @@ struct benchmark
 
         std::cout << name << " elapsed time: " << elapsed << '\n';
     }
+
+#ifdef __CUDACC__
+    thrust::device_vector<quad_type> d_quads;
+    thrust::device_vector<ray_type> d_rays;
+
+    void init_device_data()
+    {
+        d_quads = thrust::device_vector<quad_type>(quads);
+        d_rays = thrust::device_vector<quad_type>(rays);
+    }
+
+    void run_cuda_test()
+    {
+        timer t;
+
+        dim3 block_size(32);
+        dim3 grid_size(
+                div_up(ray_count, block_size.x)
+                );
+
+        cuda_kernel <<<grid_size, block_size>>> (
+                thrust::raw_pointer_cast(d_rays.data()),
+                thrust::raw_pointer_cast(d_quads.data()),
+                thrust::raw_pointer_cast(d_quads.data()) + d_quads.size()
+                );
+
+        volatile auto elapsed = t.elapsed();
+        std::cout << name << " elapsed time: " << elapsed << '\n';
+    }
+
+    template
+    <typename Intersector>
+    __global__ void cuda_kernel(ray_type *rays, quad_type *first, quad_type *last)
+    {
+        Intersector i;
+        auto index = blockIdx.x * blockSize.x + threadIdx.x;
+        if (index < ray_count)
+        {
+            ray_type r = rays[index];
+            volatile auto hr = closest_hit(r, first, last, i);
+        }
+    }
+#endif
 };
+
 
 //-------------------------------------------------------------------------------------------------
 // Main function, performs initialization

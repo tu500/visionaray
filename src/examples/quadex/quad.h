@@ -298,6 +298,12 @@ hit_record<R, primitive<unsigned>> intersect_pluecker(R const& ray, basic_quad<f
     vector<6, T> e4(quad.v4 - quad.v1, cross(quad.v4, quad.v1));
     vector<6, T> r(cross(ray.dir, ray.ori), ray.dir);
 
+    //vector<3, T> e1(cross(vector<3,T>(quad.v1 - quad.v2), vector<3,T>(quad.v2) - ray.ori));
+    //vector<3, T> e2(cross(vector<3,T>(quad.v2 - quad.v3), vector<3,T>(quad.v3) - ray.ori));
+    //vector<3, T> e3(cross(vector<3,T>(quad.v3 - quad.v4), vector<3,T>(quad.v4) - ray.ori));
+    //vector<3, T> e4(cross(vector<3,T>(quad.v4 - quad.v1), vector<3,T>(quad.v1) - ray.ori));
+    //vector<3, T> r(ray.dir);
+
     T s1 = copysign(T(1.0), dot(e1, r));
     T s2 = copysign(T(1.0), dot(e2, r));
     T s3 = copysign(T(1.0), dot(e3, r));
@@ -324,7 +330,7 @@ hit_record<R, primitive<unsigned>> intersect_pluecker(R const& ray, basic_quad<f
         result.prim_id = quad.prim_id;
         result.geom_id = quad.geom_id;
         result.isect_pos = ray.ori + ray.dir * result.t;
-#if 1
+#if 0
         V2 uv = get_uv(quad, result.isect_pos);
         result.u = uv.x;
         result.v = uv.y;
