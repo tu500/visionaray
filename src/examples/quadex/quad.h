@@ -7,6 +7,8 @@
 #include <visionaray/math/math.h>
 #include <visionaray/intersector.h>
 
+#define CALCULATE_UV 0
+
 namespace visionaray
 {
 
@@ -174,6 +176,7 @@ inline auto intersect(vector<2, T> const& p, line<T> const& l)
 //
 
 template <typename T>
+VSNRAY_FUNC
 vector<2, T> get_uv(basic_quad<float> const& quad, vector<3, T> const& isect_pos)
 {
     // Glassner 1989, "An Introduction to Ray Tracing", p.60
@@ -284,6 +287,7 @@ vector<2, T> get_uv(basic_quad<float> const& quad, vector<3, T> const& isect_pos
 //
 
 template <typename R>
+VSNRAY_FUNC
 hit_record<R, primitive<unsigned>> intersect_pluecker(R const& ray, basic_quad<float> const& quad)
 {
     using T  = typename R::scalar_type;
@@ -311,6 +315,16 @@ hit_record<R, primitive<unsigned>> intersect_pluecker(R const& ray, basic_quad<f
 
     result.hit = s1 == s2 && s1 == s3 && s1 == s4;
 
+    //T s1 = dot(e1, r);
+    //T s2 = dot(e2, r);
+    //T s3 = dot(e3, r);
+    //T s4 = dot(e4, r);
+
+    //result.hit = (0 == 0x7fffffff & (
+    //    (reinterpret_cast<uint32_t>(s1) ^ reinterpret_cast<uint32_t>(s2)) |
+    //    (reinterpret_cast<uint32_t>(s2) ^ reinterpret_cast<uint32_t>(s3)) |
+    //    (reinterpret_cast<uint32_t>(s3) ^ reinterpret_cast<uint32_t>(s4))) );
+
     if (any(result.hit))
     {
         V v1(quad.v1);
@@ -330,7 +344,7 @@ hit_record<R, primitive<unsigned>> intersect_pluecker(R const& ray, basic_quad<f
         result.prim_id = quad.prim_id;
         result.geom_id = quad.geom_id;
         result.isect_pos = ray.ori + ray.dir * result.t;
-#if 0
+#if CALCULATE_UV
         V2 uv = get_uv(quad, result.isect_pos);
         result.u = uv.x;
         result.v = uv.y;
@@ -347,6 +361,7 @@ hit_record<R, primitive<unsigned>> intersect_pluecker(R const& ray, basic_quad<f
 //
 
 template <typename R>
+VSNRAY_FUNC
 hit_record<R, primitive<unsigned>> intersect_project_2D(R const& ray, basic_quad<float> const& quad)
 {
     using T  = typename R::scalar_type;
@@ -408,7 +423,7 @@ hit_record<R, primitive<unsigned>> intersect_project_2D(R const& ray, basic_quad
     result.geom_id = quad.geom_id;
     result.isect_pos = isect_pos;
 
-#if 1
+#if CALCULATE_UV
     if (!any(result.hit))
     {
         return result;
@@ -429,6 +444,7 @@ hit_record<R, primitive<unsigned>> intersect_project_2D(R const& ray, basic_quad
 //
 
 template <typename R>
+VSNRAY_FUNC
 hit_record<R, primitive<unsigned>> intersect_uv(R const& ray, basic_quad<float> const& quad)
 {
     using T  = typename R::scalar_type;
@@ -477,7 +493,7 @@ hit_record<R, primitive<unsigned>> intersect_uv(R const& ray, basic_quad<float> 
 
 
 template <typename T, typename U>
-MATH_FUNC
+VSNRAY_FUNC
 inline hit_record<basic_ray<T>, primitive<unsigned>> intersect_mt_bl_uv(
         basic_ray<T> const&                     ray,
         basic_quad<U> const&                    quad
@@ -557,6 +573,7 @@ inline hit_record<basic_ray<T>, primitive<unsigned>> intersect_mt_bl_uv(
         return result;
     }
 
+#if CALCULATE_UV
     // now calculate bilinear coordinates relative to the quad
     T u, v;
 
@@ -579,18 +596,20 @@ inline hit_record<basic_ray<T>, primitive<unsigned>> intersect_mt_bl_uv(
         T C = b1;
 
         T D = B * B - 4.0 * A * C;
-        T Q = -0.5 * (B + copysign(sqrt(D), B));
+        T Q = -0.5 * (B + copysignf(sqrtf(D), B));
 
         u = Q / A;
         u = select(u < 0.0 || u > 1.0, C / Q, u);
         v = b2 / (u * (v4_y - 1.0) + 1.0);
     }
 
+    result.u = u;
+    result.v = v;
+#endif
+
     result.prim_id = quad.prim_id;
     result.geom_id = quad.geom_id;
     result.t = dot(e2, s2) * inv_div;
-    result.u = u;
-    result.v = v;
     return result;
 
 }
@@ -603,6 +622,7 @@ inline hit_record<basic_ray<T>, primitive<unsigned>> intersect_mt_bl_uv(
 //
 
 template <typename R>
+VSNRAY_FUNC
 hit_record<R, primitive<unsigned>> intersect(R const& ray, basic_quad<float> const& quad)
 {
     return detail::intersect_mt_bl_uv(ray, quad);
@@ -616,6 +636,7 @@ struct quad_intersector_mt_bl_uv : basic_intersector<quad_intersector_mt_bl_uv>
     using basic_intersector<quad_intersector_mt_bl_uv>::operator();
 
     template <typename R, typename S>
+    VSNRAY_FUNC
     auto operator()(
             R const& ray,
             basic_quad<S> const& quad
@@ -631,6 +652,7 @@ struct quad_intersector_pluecker : basic_intersector<quad_intersector_pluecker>
     using basic_intersector<quad_intersector_pluecker>::operator();
 
     template <typename R, typename S>
+    VSNRAY_FUNC
     auto operator()(
             R const& ray,
             basic_quad<S> const& quad
@@ -646,6 +668,7 @@ struct quad_intersector_project_2D : basic_intersector<quad_intersector_project_
     using basic_intersector<quad_intersector_project_2D>::operator();
 
     template <typename R, typename S>
+    VSNRAY_FUNC
     auto operator()(
             R const& ray,
             basic_quad<S> const& quad
@@ -661,6 +684,7 @@ struct quad_intersector_uv : basic_intersector<quad_intersector_uv>
     using basic_intersector<quad_intersector_uv>::operator();
 
     template <typename R, typename S>
+    VSNRAY_FUNC
     auto operator()(
             R const& ray,
             basic_quad<S> const& quad
@@ -673,6 +697,7 @@ struct quad_intersector_uv : basic_intersector<quad_intersector_uv>
 
 
 template <typename HR, typename T>
+VSNRAY_FUNC
 inline vector<3, T> get_normal(HR const hr, basic_quad<T> const& quad)
 {
     VSNRAY_UNUSED(hr);
