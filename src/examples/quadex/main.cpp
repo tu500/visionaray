@@ -30,6 +30,7 @@
 #include <thrust/device_vector.h>
 
 #include "quad.h"
+#include "snex.h"
 
 using namespace visionaray;
 
@@ -263,6 +264,7 @@ struct benchmark
     typedef basic_ray<float> ray_type;
     typedef basic_ray<S> ray_type_cpu;
 
+    aligned_vector<quad_prim<float>> quads_opt;
     aligned_vector<quad_type, 32> quads;
     aligned_vector<ray_type, 32> rays;
 
@@ -311,6 +313,14 @@ struct benchmark
                     -v * dist(rng) + center
                     );
             quads.push_back(quad);
+
+
+            quads_opt.push_back(quad_prim<float>::make_quad(
+                    u * dist(rng) + center,
+                    v * dist(rng) + center,
+                    -u * dist(rng) + center,
+                    -v * dist(rng) + center
+                    ));
         }
     }
 
@@ -371,12 +381,14 @@ struct benchmark
 
 #ifdef __CUDACC__
     thrust::device_vector<quad_type> d_quads;
+    thrust::device_vector<quad_prim<float>> d_quads_opt;
     thrust::device_vector<ray_type> d_rays;
 
     void init_device_data()
     {
         d_quads = thrust::device_vector<quad_type>(quads);
         d_rays = thrust::device_vector<ray_type>(rays);
+        d_quads_opt = thrust::device_vector<quad_prim<float>>(quads_opt);
     }
 
     void run_cuda_test()
@@ -391,12 +403,18 @@ struct benchmark
         {
             timer t;
 
-            cuda_kernel<quad_intersector_pluecker> <<<grid_size, block_size>>> (
+            cuda_kernel<quad_intersector_opt> <<<grid_size, block_size>>> (
                     thrust::raw_pointer_cast(d_rays.data()),
                     ray_count,
-                    thrust::raw_pointer_cast(d_quads.data()),
-                    thrust::raw_pointer_cast(d_quads.data()) + d_quads.size()
+                    thrust::raw_pointer_cast(d_quads_opt.data()),
+                    thrust::raw_pointer_cast(d_quads_opt.data()) + d_quads_opt.size()
                     );
+            //cuda_kernel<quad_intersector_pluecker> <<<grid_size, block_size>>> (
+            //        thrust::raw_pointer_cast(d_rays.data()),
+            //        ray_count,
+            //        thrust::raw_pointer_cast(d_quads.data()),
+            //        thrust::raw_pointer_cast(d_quads.data()) + d_quads.size()
+            //        );
 
             cudaDeviceSynchronize();
 
