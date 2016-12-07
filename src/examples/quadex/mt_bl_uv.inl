@@ -1,3 +1,6 @@
+namespace QUAD_NS
+{
+
 namespace detail {
 
 template <typename T, typename U>
@@ -123,3 +126,5 @@ inline hit_record<basic_ray<T>, primitive<unsigned>> intersect_mt_bl_uv(
 }
 
 } // detail
+
+} // QUAD_NS

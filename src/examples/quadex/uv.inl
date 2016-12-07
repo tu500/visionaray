@@ -1,3 +1,6 @@
+namespace QUAD_NS
+{
+
 namespace detail {
 
 //-------------------------------------------------------------------------------------------------
@@ -68,3 +71,5 @@ hit_record<R, primitive<unsigned>> intersect_uv(R const& ray, basic_quad<float> 
 }
 
 } // detail
+
+} // QUAD_NS

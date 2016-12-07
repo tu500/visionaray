@@ -21,6 +21,11 @@
 
 #define CALCULATE_UV 0
 
+#define QUAD_NS
+
+namespace QUAD_NS
+{
+
 using namespace visionaray;
 
 //-------------------------------------------------------------------------------------------------
@@ -355,6 +360,8 @@ inline auto get_tex_coord(
 
     return lerp(t11, t12, hr.v);
 }
+
+} // QUAD_NS
 
 
 namespace visionaray

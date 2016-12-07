@@ -9,7 +9,7 @@
 
 using namespace visionaray;
 
-namespace snex
+namespace QUAD_NS
 {
 
 template <typename T>
@@ -125,7 +125,7 @@ public:
     }
 };
 
-}
+} // QUAD_NS
 
 
 namespace visionaray
@@ -343,4 +343,4 @@ struct num_tex_coords<snex::quad_prim<T>>
     enum { value = 4 };
 };
 
-}
+} // visionaray

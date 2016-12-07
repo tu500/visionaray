@@ -1,3 +1,6 @@
+namespace QUAD_NS
+{
+
 namespace detail {
 
 //-------------------------------------------------------------------------------------------------
@@ -226,3 +229,5 @@ hit_record<R, primitive<unsigned>> intersect_project_2D(R const& ray, basic_quad
 
 
 } // detail
+
+} // QUAD_NS

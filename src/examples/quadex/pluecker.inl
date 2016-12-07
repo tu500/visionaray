@@ -1,3 +1,6 @@
+namespace QUAD_NS
+{
+
 namespace detail {
 
 //-------------------------------------------------------------------------------------------------
@@ -78,3 +81,5 @@ hit_record<R, primitive<unsigned>> intersect_pluecker(R const& ray, basic_quad<f
 }
 
 } // detail
+
+} // QUAD_NS
