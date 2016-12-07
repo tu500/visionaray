@@ -9,6 +9,9 @@
 
 #include <GL/glew.h>
 
+#include <Support/CmdLine.h>
+#include <Support/CmdLineUtil.h>
+
 #include <visionaray/detail/platform.h>
 
 #include <visionaray/texture/texture.h>
@@ -27,167 +30,16 @@
 #include <common/timer.h>
 #include <common/viewer_glut.h>
 
+#ifdef __CUDACC__
 #include <thrust/device_vector.h>
+#endif
 
-#include "quad.h"
+#include "basic_quad.h"
 #include "snex.h"
 
 using namespace visionaray;
 
 using viewer_type = viewer_glut;
-
-
-////-------------------------------------------------------------------------------------------------
-//// struct with state variables
-////
-//
-//struct renderer : viewer_type
-//{
-//    //using host_ray_type = basic_ray<simd::float8>;
-//    using host_ray_type = basic_ray<float>;
-//
-//    renderer()
-//        : viewer_type(512, 512, "Visionaray Quad Example")
-//        , bbox({ -20.0f, -20.0f, -20.0f }, { 20.0f, 20.0f, 20.0f })
-////      , host_sched(1)
-//        , host_sched(8)
-//    {
-//        quad.v1 = vec3(-15.0f,  0.0f,  15.0f);
-//        quad.v2 = vec3( 15.0f,  0.0f,  15.0f);
-//        quad.v3 = vec3( 15.0f,  0.0f, -15.0f);
-//        quad.v4 = vec3(-15.0f,  0.0f, -29.0f);
-//        quad.prim_id = 0;
-//        quad.geom_id = 0;
-//
-//        material.set_ca( from_rgb(0.2f, 0.2f, 0.2f) );
-//        material.set_cd( from_rgb(0.8f, 0.8f, 0.8f) );
-//        material.set_cs( from_rgb(0.1f, 0.1f, 0.1f) );
-//        material.set_ka( 1.0f );
-//        material.set_kd( 1.0f );
-//        material.set_ks( 1.0f );
-//        material.set_specular_exp( 32.0f );
-//
-//        vec3 chess[4] = {
-//            vec3(1.0f, 0.0f, 0.0f),
-//            vec3(1.0f, 1.0f, 1.0f),
-//            vec3(1.0f, 0.0f, 0.0f),
-//            vec3(1.0f, 1.0f, 1.0f)
-//            };
-//
-//        tex = texture<vec3, 2>(2, 2);
-//        tex.set_address_mode( Wrap );
-//        tex.set_filter_mode( Nearest );
-//        tex.set_data(chess);
-//
-//        tex_coords.resize(4);
-//        tex_coords[0] = vec2(0.0f, 0.0f);
-//        tex_coords[1] = vec2(1.0f, 0.0f);
-//        tex_coords[2] = vec2(1.0f, 1.0f);
-//        tex_coords[3] = vec2(0.0f, 1.0f);
-//    }
-//
-//    aabb                                        bbox;
-//    camera                                      cam;
-//    cpu_buffer_rt<PF_RGBA32F, PF_UNSPECIFIED>   host_rt;
-//    tiled_sched<host_ray_type>                  host_sched;
-//
-//
-//    // rendering data
-//
-//    basic_quad<float>                           quad;
-//    plastic<float>                              material;
-//    texture<vec3, 2>                            tex;
-//    aligned_vector<vec2>                        tex_coords;
-//
-//protected:
-//
-//    void on_display();
-//    void on_resize(int w, int h);
-//
-//};
-//
-//
-////-------------------------------------------------------------------------------------------------
-//// Display function
-////
-//
-//void renderer::on_display()
-//{
-//    // some setup
-//    auto sparams = make_sched_params(
-//            cam,
-//            host_rt
-//            );
-//
-//
-//    aligned_vector<basic_quad<float>> primitives;
-//    primitives.push_back(quad);
-//
-//    aligned_vector<plastic<float>> materials;
-//    materials.push_back(material);
-//
-//    aligned_vector<vec3> normals;
-//    normals.push_back(vec3(0, 1, 0));
-//
-//
-//    // headlight
-//    point_light<float> light;
-//    light.set_cl( vec3(1.0f, 1.0f, 1.0f) );
-//    light.set_kl( 1.0f );
-//    light.set_position(cam.eye());
-//
-//    aligned_vector<point_light<float>> lights;
-//    lights.push_back(light);
-//
-//
-//    auto kparams = make_kernel_params(
-//            normals_per_face_binding{},
-//            primitives.data(),
-//            primitives.data() + primitives.size(),
-//            normals.data(),
-//            tex_coords.data(),
-//            materials.data(),
-//            &tex,
-//            lights.data(),
-//            lights.data() + lights.size(),
-//            1,          // num bounces - irrelevant for primary ray shading
-//            1E-3f       // a tiny number - also irrelevant for primary ray shading
-//            );
-//
-//
-//    simple::kernel<decltype(kparams)> kern;
-//    kern.params = kparams;
-//
-//    timer t;
-//
-//    host_sched.frame(kern, sparams);
-//
-//    std::cout << "Elapsed rendering time: " << t.elapsed() << '\n';
-//
-//
-//    // display the rendered image
-//
-//    auto bgcolor = background_color();
-//    glClearColor(bgcolor.x, bgcolor.y, bgcolor.z, 1.0);
-//    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-//
-//    host_rt.display_color_buffer();
-//}
-//
-//
-////-------------------------------------------------------------------------------------------------
-//// resize event
-////
-//
-//void renderer::on_resize(int w, int h)
-//{
-//    cam.set_viewport(0, 0, w, h);
-//    float aspect = w / static_cast<float>(h);
-//    cam.perspective(45.0f * constants::degrees_to_radians<float>(), aspect, 0.001f, 1000.0f);
-//    host_rt.resize(w, h);
-//
-//    viewer_type::on_resize(w, h);
-//}
 
 
 template <typename T>
@@ -270,6 +122,8 @@ struct benchmark
 
     aligned_vector<basic_ray<S>, 32> rays_cpu;
 
+    std::string name_;
+    int cuda_block_size = 192;
 
 
     const unsigned int quad_count = 100000;
@@ -282,8 +136,10 @@ struct benchmark
     rand_engine  rng;
     uniform_dist dist;
 
-    benchmark()
-        : rng(0), dist(0, 1)
+    benchmark(std::string name)
+        : name_(name)
+        , rng(0)
+        , dist(0, 1)
     {
         generate_quads();
         generate_rays();
@@ -293,15 +149,10 @@ struct benchmark
     {
         for (size_t i=0; i<quad_count; i++)
         {
-            vec3 normal = normalize(vec3(dist(rng), dist(rng), dist(rng)));
-
-            auto w = normal;
-            auto v = select(
-                    abs(w.x) > abs(w.y),
-                    normalize( vec3(-w.z, 0.f, w.x) ),
-                    normalize( vec3(0.f, w.z, -w.y) )
-                    );
-            auto u = cross(v, w);
+            vec3 u;
+            vec3 v;
+            vec3 w = normalize(vec3(dist(rng), dist(rng), dist(rng)));
+            make_orthonormal_basis(u, v, w);
 
             //vec3 center = vec3(vec3(dist(rng), dist(rng), dist(rng)));
             vec3 center = vec3(0.f);
@@ -344,10 +195,14 @@ struct benchmark
     {
         benchmark_impl<S> impl;
         impl.pack_rays(rays_cpu, rays);
+
+#ifdef __CUDACC__
+        init_device_data();
+#endif
     }
 
 
-    void operator() ()
+    double operator()()
     {
         //run_test<quad_intersector_mt_bl_uv>("mt bl uv");
         //run_test<quad_intersector_pluecker>("pluecker");
@@ -355,15 +210,12 @@ struct benchmark
         //run_test<quad_intersector_uv>("uv");
 
 #ifdef __CUDACC__
-        init_device_data();
-        run_cuda_test();
+        return run_cuda_test();
 #endif
-
-        std::cout << "done\n";
     }
 
     template <typename intersector>
-    void run_test(std::string name)
+    double run_test()
     {
         intersector i;
 
@@ -374,9 +226,7 @@ struct benchmark
             volatile auto hr = closest_hit(r, quads.begin(), quads.end(), i);
         }
 
-        volatile auto elapsed = t.elapsed();
-
-        std::cout << name << " elapsed time: " << elapsed << '\n';
+        return t.elapsed();
     }
 
 #ifdef __CUDACC__
@@ -391,17 +241,14 @@ struct benchmark
         d_quads_opt = thrust::device_vector<quad_prim<float>>(quads_opt);
     }
 
-    void run_cuda_test()
+    double run_cuda_test()
     {
+        dim3 block_size(cuda_block_size);
+        dim3 grid_size(div_up(ray_count, block_size.x));
 
-        dim3 block_size(32);
-        dim3 grid_size(
-                div_up(ray_count, block_size.x)
-                );
-
-#if 1
+        if (name_ == "opt")
         {
-            timer t;
+            cuda::timer t;
 
             cuda_kernel<quad_intersector_opt> <<<grid_size, block_size>>> (
                     thrust::raw_pointer_cast(d_rays.data()),
@@ -409,22 +256,12 @@ struct benchmark
                     thrust::raw_pointer_cast(d_quads_opt.data()),
                     thrust::raw_pointer_cast(d_quads_opt.data()) + d_quads_opt.size()
                     );
-            //cuda_kernel<quad_intersector_pluecker> <<<grid_size, block_size>>> (
-            //        thrust::raw_pointer_cast(d_rays.data()),
-            //        ray_count,
-            //        thrust::raw_pointer_cast(d_quads.data()),
-            //        thrust::raw_pointer_cast(d_quads.data()) + d_quads.size()
-            //        );
 
-            cudaDeviceSynchronize();
-
-            volatile auto elapsed = t.elapsed();
-            std::cout << "cuda test elapsed time: " << elapsed << '\n';
+            return t.elapsed();
         }
-#endif
-#if 0
+        else if (name_ == "mt bl uv")
         {
-            timer t;
+            cuda::timer t;
 
             cuda_kernel<quad_intersector_mt_bl_uv> <<<grid_size, block_size>>> (
                     thrust::raw_pointer_cast(d_rays.data()),
@@ -433,14 +270,11 @@ struct benchmark
                     thrust::raw_pointer_cast(d_quads.data()) + d_quads.size()
                     );
 
-            cudaDeviceSynchronize();
-
-            volatile auto elapsed = t.elapsed();
-            std::cout << "cuda mt_bl_uv elapsed time: " << elapsed << '\n';
+            return t.elapsed();
         }
-
+        else if (name_ == "pluecker")
         {
-            timer t;
+            cuda::timer t;
 
             cuda_kernel<quad_intersector_pluecker> <<<grid_size, block_size>>> (
                     thrust::raw_pointer_cast(d_rays.data()),
@@ -449,14 +283,11 @@ struct benchmark
                     thrust::raw_pointer_cast(d_quads.data()) + d_quads.size()
                     );
 
-            cudaDeviceSynchronize();
-
-            volatile auto elapsed = t.elapsed();
-            std::cout << "cuda pluecker elapsed time: " << elapsed << '\n';
+            return t.elapsed();
         }
-
+        else if (name_ == "project 2d")
         {
-            timer t;
+            cuda::timer t;
 
             cuda_kernel<quad_intersector_project_2D> <<<grid_size, block_size>>> (
                     thrust::raw_pointer_cast(d_rays.data()),
@@ -465,14 +296,11 @@ struct benchmark
                     thrust::raw_pointer_cast(d_quads.data()) + d_quads.size()
                     );
 
-            cudaDeviceSynchronize();
-
-            volatile auto elapsed = t.elapsed();
-            std::cout << "cuda project_2D elapsed time: " << elapsed << '\n';
+            return t.elapsed();
         }
-
+        else if (name_ == "uv")
         {
-            timer t;
+            cuda::timer t;
 
             cuda_kernel<quad_intersector_uv> <<<grid_size, block_size>>> (
                     thrust::raw_pointer_cast(d_rays.data()),
@@ -481,12 +309,10 @@ struct benchmark
                     thrust::raw_pointer_cast(d_quads.data()) + d_quads.size()
                     );
 
-            cudaDeviceSynchronize();
-
-            volatile auto elapsed = t.elapsed();
-            std::cout << "cuda uv elapsed time: " << elapsed << '\n';
+            return t.elapsed();
         }
-#endif
+
+        return 0.0;
     }
 #endif
 };
@@ -498,34 +324,77 @@ struct benchmark
 
 int main(int argc, char** argv)
 {
-    //benchmark<simd::float8> b;
-    benchmark<float> b;
-    b.init();
-    b();
-    return 0;
+    int dry_runs = 3;   // some dry runs to fill the caches
+    int bench_runs = 10;
+    int bs = 192;
 
-//    renderer rend;
-//
-//    try
-//    {
-//        rend.init(argc, argv);
-//    }
-//    catch (std::exception& e)
-//    {
-//        std::cerr << e.what() << '\n';
-//        return EXIT_FAILURE;
-//    }
-//
-//    float aspect = rend.width() / static_cast<float>(rend.height());
-//
-//    rend.cam.perspective(45.0f * constants::degrees_to_radians<float>(), aspect, 0.001f, 1000.0f);
-//    rend.cam.view_all( rend.bbox );
-//
-//    rend.add_manipulator( std::make_shared<arcball_manipulator>(rend.cam, mouse::Left) );
-//    rend.add_manipulator( std::make_shared<pan_manipulator>(rend.cam, mouse::Middle) );
-//    // Additional "Alt + LMB" pan manipulator for setups w/o middle mouse button
-//    rend.add_manipulator( std::make_shared<pan_manipulator>(rend.cam, mouse::Left, keyboard::Alt) );
-//    rend.add_manipulator( std::make_shared<zoom_manipulator>(rend.cam, mouse::Right) );
-//
-//    rend.event_loop();
+    std::string name = "opt";
+
+
+    using namespace support;
+
+    cl::CmdLine cmd;
+
+    auto bsref = cl::makeOption<int&>(
+            cl::Parser<>(), cmd, "blocksize",
+            cl::ArgName("blocksize"),
+            cl::ArgRequired,
+            cl::init(bs),
+            cl::Desc("CUDA block size")
+            );
+
+    auto nref = cl::makeOption<std::string&>(
+            cl::Parser<>(), cmd, "intersect",
+            cl::ArgName("intersect"),
+            cl::ArgRequired,
+            cl::init(name),
+            cl::Desc("Intersection algorithm")
+            );
+
+    try
+    {
+        auto args = std::vector<std::string>(argv + 1, argv + argc);
+
+        cl::expandWildcards(args);
+        //cl::expandResponseFiles(args, cl::TokenizeWindows());
+        cl::expandResponseFiles(args, cl::TokenizeUnix());
+
+        cmd.parse(args);
+    }
+    catch (std::exception& e)
+    {
+        std::cout << "error: " << e.what() << '\n';
+        std::cout << '\n';
+        std::cout << cmd.help("benchmark") << '\n';
+        return -1;
+    }
+
+    //benchmark<simd::float8> b;
+    benchmark<float> b(name);
+    b.init();
+    b.cuda_block_size = bs;
+
+    for (int i = 0; i < dry_runs; ++i)
+    {
+        volatile double t = b() * 1000.0;
+    }
+
+    std::vector<double> times(bench_runs);
+    for (int i = 0; i < bench_runs; ++i)
+    {
+        times[i] = b() * 1000.0;
+    }
+
+    std::sort(times.begin(), times.end());
+    double sum = std::accumulate(times.begin(), times.end(), 0.0);
+    std::cout << "Benchmark: " << name << '\n';
+    std::cout << "CUDA grid: " << div_up((int)b.rays.size(), b.cuda_block_size) << " blocks of size " << b.cuda_block_size << '\n';
+    std::cout << "Num rays:  " << b.rays.size() << '\n';
+    std::cout << "Rays/sec:  " << b.rays.size() * bench_runs * 1000.0 / sum << '\n';
+    std::cout << "Average:   " << sum / bench_runs << " ms\n";
+    std::cout << "Median:    " << times[bench_runs / 2] << " ms\n";
+    std::cout << "Max:       " << times.back() << " ms\n";
+    std::cout << "Min:       " << times[0] << " ms\n";
+
+    return 0;
 }
