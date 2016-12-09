@@ -96,6 +96,7 @@ struct benchmark_impl <float>
     }
 };
 
+#ifdef __CUDACC__
 template
 <typename Intersector, typename quad_type, typename ray_type>
 __global__ void cuda_kernel(ray_type *rays, unsigned int ray_count, quad_type *first, quad_type *last)
@@ -108,6 +109,7 @@ __global__ void cuda_kernel(ray_type *rays, unsigned int ray_count, quad_type *f
         volatile auto hr = closest_hit(r, first, last, i);
     }
 }
+#endif
 
 template <typename S>
 struct benchmark
@@ -124,6 +126,7 @@ struct benchmark
     aligned_vector<basic_ray<S>, 32> rays_cpu;
 
     std::string name_;
+    bool cuda_test;
     int cuda_block_size = 192;
 
 
@@ -137,10 +140,11 @@ struct benchmark
     rand_engine  rng;
     uniform_dist dist;
 
-    benchmark(std::string name)
+    benchmark(std::string name, bool cuda_test)
         : name_(name)
         , rng(0)
         , dist(0, 1)
+        , cuda_test(cuda_test)
     {
         generate_quads();
         generate_rays();
@@ -205,14 +209,24 @@ struct benchmark
 
     double operator()()
     {
-        //run_test<quad_intersector_mt_bl_uv>("mt bl uv");
-        //run_test<quad_intersector_pluecker>("pluecker");
-        //run_test<quad_intersector_project_2D>("project 2d");
-        //run_test<quad_intersector_uv>("uv");
-
+        if (!cuda_test)
+        {
+            if (name_ == "mt bl uv")
+                return run_test<quad_intersector_mt_bl_uv>();
+            if (name_ == "pluecker")
+                return run_test<quad_intersector_pluecker>();
+            if (name_ == "project 2d")
+                return run_test<quad_intersector_project_2D>();
+            if (name_ == "uv")
+                return run_test<quad_intersector_uv>();
+        }
+        else
+        {
 #ifdef __CUDACC__
-        return run_cuda_test();
+            return run_cuda_test();
 #endif
+        }
+        return 0.0;
     }
 
     template <typename intersector>
@@ -329,6 +343,8 @@ int main(int argc, char** argv)
     int bench_runs = 10;
     int bs = 192;
 
+    int do_cuda_test = 0;
+
     std::string name = "opt";
 
 
@@ -352,6 +368,13 @@ int main(int argc, char** argv)
             cl::Desc("Intersection algorithm")
             );
 
+    auto ctref = cl::makeOption<int&>(
+            cl::Parser<>(), cmd, "cuda_test",
+            cl::ArgName("cuda_test"),
+            cl::init(do_cuda_test),
+            cl::Desc("Whether to test cuda algorithm")
+            );
+
     try
     {
         auto args = std::vector<std::string>(argv + 1, argv + argc);
@@ -371,7 +394,7 @@ int main(int argc, char** argv)
     }
 
     //benchmark<simd::float8> b;
-    benchmark<float> b(name);
+    benchmark<float> b(name, do_cuda_test);
     b.init();
     b.cuda_block_size = bs;
 
@@ -388,14 +411,15 @@ int main(int argc, char** argv)
 
     std::sort(times.begin(), times.end());
     double sum = std::accumulate(times.begin(), times.end(), 0.0);
-    std::cout << "Benchmark: " << name << '\n';
-    std::cout << "CUDA grid: " << div_up((int)b.rays.size(), b.cuda_block_size) << " blocks of size " << b.cuda_block_size << '\n';
-    std::cout << "Num rays:  " << b.rays.size() << '\n';
-    std::cout << "Rays/sec:  " << b.rays.size() * bench_runs * 1000.0 / sum << '\n';
-    std::cout << "Average:   " << sum / bench_runs << " ms\n";
-    std::cout << "Median:    " << times[bench_runs / 2] << " ms\n";
-    std::cout << "Max:       " << times.back() << " ms\n";
-    std::cout << "Min:       " << times[0] << " ms\n";
+    std::cout << "Benchmark:   " << name << '\n';
+    if (do_cuda_test)
+    std::cout << "CUDA grid:   " << div_up((int)b.rays.size(), b.cuda_block_size) << " blocks of size " << b.cuda_block_size << '\n';
+    std::cout << "Num rays:    " << b.rays.size() << '\n';
+    std::cout << "Rays/sec:    " << b.rays.size() * bench_runs * 1000.0 / sum << '\n';
+    std::cout << "Average:     " << sum / bench_runs << " ms\n";
+    std::cout << "Median:      " << times[bench_runs / 2] << " ms\n";
+    std::cout << "Max:         " << times.back() << " ms\n";
+    std::cout << "Min:         " << times[0] << " ms\n";
 
     return 0;
 }
