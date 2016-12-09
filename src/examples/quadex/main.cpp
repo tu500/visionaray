@@ -61,41 +61,6 @@ basic_quad<T> make_quad(
 }
 
 
-template <typename S>
-struct benchmark_impl
-{
-    template <typename V1, typename V2>
-    void pack_rays(V1& rays_cpu, V2 const& rays)
-    {
-        assert(rays.size() % 8 == 0);
-
-        const size_t packet_size = simd::num_elements<S>::value;
-
-        for (size_t i=0; i<rays.size()/packet_size; i++)
-        {
-            std::array<basic_ray<float>, packet_size> ra;
-
-            for (size_t e=0; e<packet_size; ++e)
-            {
-                ra[e] = rays[i*packet_size + e];
-            }
-
-            rays_cpu.push_back(simd::pack(ra));
-        }
-    }
-};
-
-template <>
-struct benchmark_impl <float>
-{
-    template <typename V1, typename V2>
-    void pack_rays(V1& rays_cpu, V2 const& rays)
-    {
-        rays_cpu.resize(rays.size());
-        std::copy(rays.cbegin(), rays.cend(), rays_cpu.begin());
-    }
-};
-
 #ifdef __CUDACC__
 template
 <typename Intersector, typename quad_type, typename ray_type>
@@ -111,23 +76,23 @@ __global__ void cuda_kernel(ray_type *rays, unsigned int ray_count, quad_type *f
 }
 #endif
 
-template <typename S>
 struct benchmark
 {
     typedef basic_quad<float> quad_type;
     typedef quad_prim<float> quad_type_opt;
     typedef basic_ray<float> ray_type;
-    typedef basic_ray<S> ray_type_cpu;
 
     aligned_vector<quad_type_opt> quads_opt;
     aligned_vector<quad_type, 32> quads;
     aligned_vector<ray_type, 32> rays;
 
-    aligned_vector<basic_ray<S>, 32> rays_cpu;
+    aligned_vector<basic_ray<simd::float4>, 32> rays_cpu4;
+    aligned_vector<basic_ray<simd::float8>, 32> rays_cpu8;
 
     std::string name_;
     bool cuda_test;
     int cuda_block_size = 192;
+    int cpu_packet_size = 1;
 
 
     const unsigned int quad_count = 100000;
@@ -196,10 +161,30 @@ struct benchmark
         }
     }
 
+    template <typename V1, typename V2>
+    void pack_rays(V1& rays_cpu, V2 const& rays)
+    {
+        assert(rays.size() % 8 == 0);
+
+        const size_t packet_size = simd::num_elements<typename V1::value_type::scalar_type>::value;
+
+        for (size_t i=0; i<rays.size()/packet_size; i++)
+        {
+            std::array<typename V2::value_type, packet_size> ra;
+
+            for (size_t e=0; e<packet_size; ++e)
+            {
+                ra[e] = rays[i*packet_size + e];
+            }
+
+            rays_cpu.push_back(simd::pack(ra));
+        }
+    }
+
     void init()
     {
-        benchmark_impl<S> impl;
-        impl.pack_rays(rays_cpu, rays);
+        pack_rays(rays_cpu4, rays);
+        pack_rays(rays_cpu8, rays);
 
 #ifdef __CUDACC__
         init_device_data();
@@ -234,14 +219,41 @@ struct benchmark
     {
         intersector i;
 
-        timer t;
-
-        for (auto &r: rays_cpu)
+        if (cpu_packet_size == 1)
         {
-            volatile auto hr = closest_hit(r, quads.begin(), quads.end(), i);
+            timer t;
+
+            for (auto &r: rays)
+            {
+                volatile auto hr = closest_hit(r, quads.begin(), quads.end(), i);
+            }
+
+            return t.elapsed();
         }
 
-        return t.elapsed();
+        else if (cpu_packet_size == 4)
+        {
+            timer t;
+
+            for (auto &r: rays_cpu4)
+            {
+                volatile auto hr = closest_hit(r, quads.begin(), quads.end(), i);
+            }
+
+            return t.elapsed();
+        }
+
+        else if (cpu_packet_size == 8)
+        {
+            timer t;
+
+            for (auto &r: rays_cpu8)
+            {
+                volatile auto hr = closest_hit(r, quads.begin(), quads.end(), i);
+            }
+
+            return t.elapsed();
+        }
     }
 
 #ifdef __CUDACC__
@@ -342,6 +354,7 @@ int main(int argc, char** argv)
     int dry_runs = 3;   // some dry runs to fill the caches
     int bench_runs = 10;
     int bs = 192;
+    int cpu_packet_size = 1;
 
     int do_cuda_test = 0;
 
@@ -375,6 +388,13 @@ int main(int argc, char** argv)
             cl::Desc("Whether to test cuda algorithm")
             );
 
+    auto psref = cl::makeOption<int&>(
+            cl::Parser<>(), cmd, "cpu_packet_size",
+            cl::ArgName("cpu_packet_size"),
+            cl::init(cpu_packet_size),
+            cl::Desc("CPU simd packet size (1,4,8)")
+            );
+
     try
     {
         auto args = std::vector<std::string>(argv + 1, argv + argc);
@@ -393,10 +413,10 @@ int main(int argc, char** argv)
         return -1;
     }
 
-    //benchmark<simd::float8> b;
-    benchmark<float> b(name, do_cuda_test);
+    benchmark b(name, do_cuda_test);
     b.init();
     b.cuda_block_size = bs;
+    b.cpu_packet_size = cpu_packet_size;
 
     for (int i = 0; i < dry_runs; ++i)
     {
