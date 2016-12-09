@@ -17,11 +17,9 @@
 #include <visionaray/math/math.h>
 #include <visionaray/intersector.h>
 
-#include "util.inl"
-
 #define CALCULATE_UV 0
 
-#define QUAD_NS visionaray
+#include "util.inl"
 
 namespace QUAD_NS
 {
@@ -192,10 +190,10 @@ template <typename R>
 VSNRAY_FUNC
 hit_record<R, primitive<unsigned>> intersect(R const& ray, basic_quad<float> const& quad)
 {
-    //return detail::intersect_mt_bl_uv(ray, quad);
-    //return detail::intersect_pluecker(ray, quad);
+    return detail::intersect_mt_bl_uv(ray, quad);
+    // return detail::intersect_pluecker(ray, quad);
     //return detail::intersect_project_2D(ray, quad);
-    return detail::intersect_uv(ray, quad);
+    //return detail::intersect_uv(ray, quad);
 }
 
 struct quad_intersector_mt_bl_uv : basic_intersector<quad_intersector_mt_bl_uv>

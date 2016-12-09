@@ -34,6 +34,10 @@
 #include <thrust/device_vector.h>
 #endif
 
+#define CALCULATE_UV 0
+
+#define QUAD_NS visionaray
+
 #include "basic_quad.h"
 #include "snex.h"
 

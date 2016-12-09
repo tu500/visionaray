@@ -24,4 +24,9 @@ visionaray_add_executable(quadex
     ${EX_QUAD_CUDA_SOURCES}
 )
 
+visionaray_add_executable(snex
+    snex.cpp
+)
+
 add_custom_target(run-quadex quadex DEPENDS quadex WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/ )
+add_custom_target(run-snex snex DEPENDS snex WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/ )
