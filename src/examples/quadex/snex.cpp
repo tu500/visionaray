@@ -17,6 +17,11 @@
 #include <visionaray/point_light.h>
 #include <visionaray/scheduler.h>
 
+#ifdef __CUDACC__
+#include <visionaray/gpu_buffer_rt.h>
+#include <visionaray/pixel_unpack_buffer_rt.h>
+#endif
+
 #include <common/manip/arcball_manipulator.h>
 #include <common/manip/pan_manipulator.h>
 #include <common/manip/zoom_manipulator.h>
@@ -24,7 +29,11 @@
 
 #include <visionaray/gl/bvh_outline_renderer.h>
 
-#define QUAD_NS snex
+#include <common/call_kernel.h>
+
+// fails with conflicting functions any(__nvbool), visionaray::simd::any(__nvbook)
+//#define QUAD_NS snex
+#define QUAD_NS visionaray
 
 #include "basic_quad.h"
 #include "snex.h"
@@ -33,8 +42,8 @@ using namespace visionaray;
 
 using viewer_type = viewer_glut;
 
-//using quad_type = snex::quad_prim<float>;
-using quad_type = snex::basic_quad<float>;
+//using quad_type = QUAD_NS::quad_prim<float>;
+using quad_type = QUAD_NS::basic_quad<float>;
 
 
 //-------------------------------------------------------------------------------------------------
@@ -43,15 +52,27 @@ using quad_type = snex::basic_quad<float>;
 
 struct renderer : viewer_type
 {
-    using host_ray_type = basic_ray<simd::float8>;
-    //using host_ray_type = basic_ray<float>;
+    //using host_ray_type = basic_ray<simd::float8>;
+    using host_ray_type = basic_ray<float>;
+
+#ifdef __CUDACC__
+    using ray_type_gpu              = basic_ray<float>;
+    using device_render_target_type = pixel_unpack_buffer_rt<PF_RGBA32F, PF_UNSPECIFIED>;
+    using device_bvh_type           = cuda_index_bvh<quad_type>;
+    using device_tex_type           = cuda_texture<vector<4, unorm<8>>, 2>;
+    using device_tex_ref_type       = typename device_tex_type::ref_type;
+#endif
 
     renderer()
         : viewer_type(512, 512, "Visionaray Custom Intersector Example")
         , bbox({ -1.0f, -1.0f, -1.0f }, { 1.0f, 1.0f, 1.0f })
         , host_sched(8)
+#ifdef __CUDACC__
+        , device_sched(8, 8)
+#endif
     {
         make_sphere();
+        init_device_data();
     }
 
     aabb                                        bbox;
@@ -70,6 +91,18 @@ struct renderer : viewer_type
 
     gl::bvh_outline_renderer                    outlines;
     bool                                        render_bvh = false;
+
+    bool                                        render_gpu = false;
+
+
+#ifdef __CUDACC__
+    device_bvh_type                             device_bvh;
+    thrust::device_vector<vec3>                 device_normals;
+    thrust::device_vector<plastic<float>>       device_materials;
+
+    cuda_sched<ray_type_gpu>                    device_sched;
+    device_render_target_type                   device_rt;
+#endif
 
 
     void make_sphere(vector<3, float> center=vector<3, float>(0.f), float radius=1.f)
@@ -156,6 +189,8 @@ protected:
     void on_close();
     void on_key_press(key_event const& event);
 
+    void init_device_data();
+
 };
 
 
@@ -195,24 +230,56 @@ void renderer::on_display()
     aligned_vector<index_bvh<quad_type>::bvh_ref> primitives;
     primitives.push_back(bvh.ref());
 
-    auto kparams = make_kernel_params(
-            normals_per_vertex_binding{},
-            primitives.data(),
-            primitives.data() + primitives.size(),
-            normals.data(),
-            materials.data(),
-            lights.data(),
-            lights.data() + lights.size(),
-            3,          // num bounces - irrelevant for primary ray shading
-            1E-3f,      // a tiny number - also irrelevant for primary ray shading
-            vec4(background_color(), 1.0f),
-            vec4(1.0f)
-            );
+    if (render_gpu)
+    {
+#ifdef __CUDACC__
+        // thrust::device_vector<renderer::device_bvh_type::bvh_ref> device_primitives;
+        //
+        // device_primitives.push_back(device_bvh.ref());
+        //
+        // thrust::device_vector<point_light<float>> device_lights = lights;
+        //
+        // auto kparams = make_kernel_params(
+        //         normals_per_vertex_binding{},
+        //         thrust::raw_pointer_cast(device_primitives.data()),
+        //         thrust::raw_pointer_cast(device_primitives.data()) + device_primitives.size(),
+        //         thrust::raw_pointer_cast(device_normals.data()),
+        //         thrust::raw_pointer_cast(device_materials.data()),
+        //         thrust::raw_pointer_cast(device_lights.data()),
+        //         thrust::raw_pointer_cast(device_lights.data()) + device_lights.size(),
+        //         3,
+        //         1E-3f,
+        //         vec4(background_color(), 1.0f),
+        //         vec4(1.0f)
+        //         );
+        //
+        // call_kernel( Simple, device_sched, kparams, frame_num, cam, device_rt );
+#endif
+    }
+    else
+    {
+#ifndef __CUDA_ARCH__
+        auto kparams = make_kernel_params(
+                normals_per_vertex_binding{},
+                primitives.data(),
+                primitives.data() + primitives.size(),
+                normals.data(),
+                materials.data(),
+                lights.data(),
+                lights.data() + lights.size(),
+                3,          // num bounces - irrelevant for primary ray shading
+                1E-3f,      // a tiny number - also irrelevant for primary ray shading
+                vec4(background_color(), 1.0f),
+                vec4(1.0f)
+                );
 
-    simple::kernel<decltype(kparams)> kern;
-    kern.params = kparams;
+        call_kernel( Simple, host_sched, kparams, frame_num, cam, host_rt );
+        //simple::kernel<decltype(kparams)> kern;
+        //kern.params = kparams;
 
-    host_sched.frame(kern, sparams, ++frame_num);
+        //host_sched.frame(kern, sparams, ++frame_num);
+#endif
+    }
 
 
     // display the rendered image
@@ -221,7 +288,16 @@ void renderer::on_display()
     glClearColor(bgcolor.x, bgcolor.y, bgcolor.z, 1.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    host_rt.display_color_buffer();
+    if (render_gpu)
+    {
+#ifdef __CUDACC__
+        device_rt.display_color_buffer();
+#endif
+    }
+    else
+    {
+        host_rt.display_color_buffer();
+    }
 
     if (render_bvh)
     {
@@ -257,6 +333,13 @@ void renderer::on_key_press(key_event const& event)
 
         break;
 
+#ifdef __CUDACC__
+    case 'g':
+        render_gpu = !render_gpu;
+
+        break;
+#endif
+
     default:
         break;
     }
@@ -275,6 +358,10 @@ void renderer::on_resize(int w, int h)
     float aspect = w / static_cast<float>(h);
     cam.perspective(45.0f * constants::degrees_to_radians<float>(), aspect, 0.001f, 1000.0f);
     host_rt.resize(w, h);
+
+#ifdef __CUDACC__
+    device_rt.resize(w, h);
+#endif
 
     viewer_type::on_resize(w, h);
 }
@@ -301,12 +388,40 @@ void renderer::on_close()
 
 
 //-------------------------------------------------------------------------------------------------
+//
+//
+
+void renderer::init_device_data()
+{
+#ifdef __CUDACC__
+    // Copy data to GPU
+    try
+    {
+        device_bvh = device_bvh_type(bvh);
+        device_normals = normals;
+        device_materials = materials;
+    }
+    catch (std::bad_alloc&)
+    {
+        std::cerr << "GPU memory allocation failed" << std::endl;
+        device_bvh = device_bvh_type();
+        device_normals.clear();
+        device_normals.shrink_to_fit();
+        device_materials.clear();
+        device_materials.shrink_to_fit();
+    }
+#endif
+}
+
+
+//-------------------------------------------------------------------------------------------------
 // Main function, performs initialization
 //
 
 int main(int argc, char** argv)
 {
     renderer rend;
+    return;
 
     try
     {
