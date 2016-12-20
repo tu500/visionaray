@@ -86,12 +86,16 @@ struct benchmark
     typedef quad_prim<float> quad_type_opt;
     typedef basic_ray<float> ray_type;
 
-    aligned_vector<quad_type_opt> quads_opt;
+    aligned_vector<quad_type_opt, 32> quads_opt;
     aligned_vector<quad_type, 32> quads;
     aligned_vector<ray_type, 32> rays;
 
+#if VSNRAY_SIMD_ISA >= VSNRAY_SIMD_ISA_SSE
     aligned_vector<basic_ray<simd::float4>, 32> rays_cpu4;
+#endif
+#if VSNRAY_SIMD_ISA >= VSNRAY_SIMD_ISA_AVX
     aligned_vector<basic_ray<simd::float8>, 32> rays_cpu8;
+#endif
 
     std::string name_;
     bool cuda_test;
@@ -99,8 +103,11 @@ struct benchmark
     int cpu_packet_size = 1;
 
 
-    const unsigned int quad_count = 100000;
-    const unsigned int ray_count = (1<<18);
+    //const unsigned int quad_count = 100000;
+    //const unsigned int ray_count = (1<<18);
+    const unsigned int quad_count = 10000;
+    //const unsigned int ray_count = (1<<16);
+    const unsigned int ray_count = (1<<16);
 
 
     typedef std::default_random_engine rand_engine;
@@ -187,8 +194,12 @@ struct benchmark
 
     void init()
     {
+#if VSNRAY_SIMD_ISA >= VSNRAY_SIMD_ISA_SSE
         pack_rays(rays_cpu4, rays);
+#endif
+#if VSNRAY_SIMD_ISA >= VSNRAY_SIMD_ISA_AVX
         pack_rays(rays_cpu8, rays);
+#endif
 
 #ifdef __CUDACC__
         init_device_data();
@@ -200,14 +211,16 @@ struct benchmark
     {
         if (!cuda_test)
         {
+            if (name_ == "opt")
+                return run_test<quad_intersector_opt>(quads_opt);
             if (name_ == "mt bl uv")
-                return run_test<quad_intersector_mt_bl_uv>();
+                return run_test<quad_intersector_mt_bl_uv>(quads);
             if (name_ == "pluecker")
-                return run_test<quad_intersector_pluecker>();
+                return run_test<quad_intersector_pluecker>(quads);
             if (name_ == "project 2d")
-                return run_test<quad_intersector_project_2D>();
+                return run_test<quad_intersector_project_2D>(quads);
             if (name_ == "uv")
-                return run_test<quad_intersector_uv>();
+                return run_test<quad_intersector_uv>(quads);
         }
         else
         {
@@ -218,8 +231,8 @@ struct benchmark
         return 0.0;
     }
 
-    template <typename intersector>
-    double run_test()
+    template <typename intersector, typename QT>
+    double run_test(aligned_vector<QT, 32> &quads)
     {
         intersector i;
 
@@ -235,18 +248,21 @@ struct benchmark
             return t.elapsed();
         }
 
+#if VSNRAY_SIMD_ISA >= VSNRAY_SIMD_ISA_SSE
         else if (cpu_packet_size == 4)
         {
-            timer t;
+           timer t;
 
-            for (auto &r: rays_cpu4)
-            {
-                volatile auto hr = closest_hit(r, quads.begin(), quads.end(), i);
-            }
+           for (auto &r: rays_cpu4)
+           {
+               volatile auto hr = closest_hit(r, quads.begin(), quads.end(), i);
+           }
 
-            return t.elapsed();
+           return t.elapsed();
         }
+#endif
 
+#if VSNRAY_SIMD_ISA >= VSNRAY_SIMD_ISA_AVX
         else if (cpu_packet_size == 8)
         {
             timer t;
@@ -258,6 +274,7 @@ struct benchmark
 
             return t.elapsed();
         }
+#endif
     }
 
 #ifdef __CUDACC__
@@ -438,6 +455,9 @@ int main(int argc, char** argv)
     std::cout << "Benchmark:   " << name << '\n';
     if (do_cuda_test)
     std::cout << "CUDA grid:   " << div_up((int)b.rays.size(), b.cuda_block_size) << " blocks of size " << b.cuda_block_size << '\n';
+    else
+    std::cout << "SIMD Packet: " << cpu_packet_size << '\n';
+    std::cout << "Num quads:   " << b.quads.size() << '\n';
     std::cout << "Num rays:    " << b.rays.size() << '\n';
     std::cout << "Rays/sec:    " << b.rays.size() * bench_runs * 1000.0 / sum << '\n';
     std::cout << "Average:     " << sum / bench_runs << " ms\n";
