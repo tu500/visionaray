@@ -125,55 +125,14 @@ public:
     }
 };
 
-} // QUAD_NS
-
-
-namespace visionaray
+namespace detail
 {
-
-
-template <typename T>
-MATH_FUNC
-basic_aabb<T> get_bounds(snex::quad_prim<T> const& t)
-{
-    basic_aabb<T> bounds;
-
-    auto v1 = t.v1;
-    auto v2 = v1 + t.e1;
-    auto v3 = v1 + t.e2;
-    auto v4 = (1 - t.v4.x - t.v4.y) * v1 + t.v4.x * v2 + t.v4.y * v3;
-
-    bounds.invalidate();
-    bounds.insert(v1);
-    bounds.insert(v2);
-    bounds.insert(v3);
-    bounds.insert(v4);
-
-    return bounds;
-}
-
-template <typename T>
-void split_primitive(aabb& L, aabb& R, float plane, int axis, snex::quad_prim<T> const& prim)
-{
-    auto v1 = prim.v1;
-    auto v2 = v1 + prim.e1;
-    auto v3 = v1 + prim.e2;
-    auto v4 = (1 - prim.v4.x - prim.v4.y) * v1 + prim.v4.x * v2 + prim.v4.y * v3;
-
-    L.invalidate();
-    R.invalidate();
-
-    detail::split_edge(L, R, v1, v2, plane, axis);
-    detail::split_edge(L, R, v2, v3, plane, axis);
-    detail::split_edge(L, R, v3, v4, plane, axis);
-    detail::split_edge(L, R, v4, v1, plane, axis);
-}
 
 template <typename T, typename U>
 MATH_FUNC
-inline hit_record<basic_ray<T>, primitive<unsigned>> intersect(
+inline hit_record<basic_ray<T>, primitive<unsigned>> intersect_opt(
         basic_ray<T> const&                     ray,
-        snex::quad_prim<U> const&               quad
+        QUAD_NS::quad_prim<U> const&               quad
         )
 {
 
@@ -269,9 +228,71 @@ inline hit_record<basic_ray<T>, primitive<unsigned>> intersect(
 
 }
 
+} // detail
+
+struct quad_intersector_opt : basic_intersector<quad_intersector_opt>
+{
+    using basic_intersector<quad_intersector_opt>::operator();
+
+    template <typename R, typename S>
+    VSNRAY_FUNC
+    auto operator()(
+            R const& ray,
+            quad_prim<S> const& quad
+            )
+        -> decltype( detail::intersect_opt(ray, quad) )
+    {
+        return detail::intersect_opt(ray, quad);
+    }
+};
+
+} // QUAD_NS
+
+
+namespace visionaray
+{
+
+
+template <typename T>
+MATH_FUNC
+basic_aabb<T> get_bounds(QUAD_NS::quad_prim<T> const& t)
+{
+    basic_aabb<T> bounds;
+
+    auto v1 = t.v1;
+    auto v2 = v1 + t.e1;
+    auto v3 = v1 + t.e2;
+    auto v4 = (1 - t.v4.x - t.v4.y) * v1 + t.v4.x * v2 + t.v4.y * v3;
+
+    bounds.invalidate();
+    bounds.insert(v1);
+    bounds.insert(v2);
+    bounds.insert(v3);
+    bounds.insert(v4);
+
+    return bounds;
+}
+
+template <typename T>
+void split_primitive(aabb& L, aabb& R, float plane, int axis, QUAD_NS::quad_prim<T> const& prim)
+{
+    auto v1 = prim.v1;
+    auto v2 = v1 + prim.e1;
+    auto v3 = v1 + prim.e2;
+    auto v4 = (1 - prim.v4.x - prim.v4.y) * v1 + prim.v4.x * v2 + prim.v4.y * v3;
+
+    L.invalidate();
+    R.invalidate();
+
+    detail::split_edge(L, R, v1, v2, plane, axis);
+    detail::split_edge(L, R, v2, v3, plane, axis);
+    detail::split_edge(L, R, v3, v4, plane, axis);
+    detail::split_edge(L, R, v4, v1, plane, axis);
+}
+
 template <typename HR, typename T>
 VSNRAY_FUNC
-inline vector<3, T> get_normal(HR const& hr, snex::quad_prim<T> const& quad)
+inline vector<3, T> get_normal(HR const& hr, QUAD_NS::quad_prim<T> const& quad)
 {
     VSNRAY_UNUSED(hr);
 
@@ -283,7 +304,7 @@ VSNRAY_FUNC
 inline auto get_normal(
         Normals                     normals,
         HR const&                   hr,
-        snex::quad_prim<T>          prim,
+        QUAD_NS::quad_prim<T>       prim,
         per_vertex_binding          /* */
         )
     -> decltype( get_normal(hr, prim) )
@@ -298,7 +319,7 @@ VSNRAY_FUNC
 inline auto get_shading_normal(
         Normals                     normals,
         HR const&                   hr,
-        snex::quad_prim<T>          /* */,
+        QUAD_NS::quad_prim<T>       /* */,
         per_vertex_binding          /* */
         )
     -> typename std::iterator_traits<Normals>::value_type
@@ -323,22 +344,22 @@ inline auto get_shading_normal(
 
 
 template <typename T>
-struct num_vertices<snex::quad_prim<T>>
+struct num_vertices<QUAD_NS::quad_prim<T>>
 {
     enum { value = 4 };
 };
 template <typename T>
-struct num_normals<snex::quad_prim<T>, per_face_binding>
+struct num_normals<QUAD_NS::quad_prim<T>, per_face_binding>
 {
     enum { value = 1 };
 };
 template <typename T>
-struct num_normals<snex::quad_prim<T>, per_vertex_binding>
+struct num_normals<QUAD_NS::quad_prim<T>, per_vertex_binding>
 {
     enum { value = 4 };
 };
 template <typename T>
-struct num_tex_coords<snex::quad_prim<T>>
+struct num_tex_coords<QUAD_NS::quad_prim<T>>
 {
     enum { value = 4 };
 };

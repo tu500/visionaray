@@ -113,10 +113,11 @@ template <typename S>
 struct benchmark
 {
     typedef basic_quad<float> quad_type;
+    typedef quad_prim<float> quad_type_opt;
     typedef basic_ray<float> ray_type;
     typedef basic_ray<S> ray_type_cpu;
 
-    aligned_vector<quad_prim<float>> quads_opt;
+    aligned_vector<quad_type_opt> quads_opt;
     aligned_vector<quad_type, 32> quads;
     aligned_vector<ray_type, 32> rays;
 
@@ -166,7 +167,7 @@ struct benchmark
             quads.push_back(quad);
 
 
-            quads_opt.push_back(quad_prim<float>::make_quad(
+            quads_opt.push_back(quad_type_opt::make_quad(
                     u * dist(rng) + center,
                     v * dist(rng) + center,
                     -u * dist(rng) + center,
@@ -231,14 +232,14 @@ struct benchmark
 
 #ifdef __CUDACC__
     thrust::device_vector<quad_type> d_quads;
-    thrust::device_vector<quad_prim<float>> d_quads_opt;
+    thrust::device_vector<quad_type_opt> d_quads_opt;
     thrust::device_vector<ray_type> d_rays;
 
     void init_device_data()
     {
         d_quads = thrust::device_vector<quad_type>(quads);
         d_rays = thrust::device_vector<ray_type>(rays);
-        d_quads_opt = thrust::device_vector<quad_prim<float>>(quads_opt);
+        d_quads_opt = thrust::device_vector<quad_type_opt>(quads_opt);
     }
 
     double run_cuda_test()

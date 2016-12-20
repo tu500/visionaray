@@ -21,7 +21,7 @@
 
 #define CALCULATE_UV 0
 
-#define QUAD_NS
+#define QUAD_NS visionaray
 
 namespace QUAD_NS
 {
@@ -172,6 +172,8 @@ vector<2, T> get_uv(basic_quad<float> const& quad, vector<3, T> const& isect_pos
 
 } // detail
 
+} // QUAD_NS
+
 
 #include "pluecker.inl"
 #include "project2d.inl"
@@ -179,6 +181,8 @@ vector<2, T> get_uv(basic_quad<float> const& quad, vector<3, T> const& isect_pos
 #include "mt_bl_uv.inl"
 
 
+namespace QUAD_NS
+{
 
 //-------------------------------------------------------------------------------------------------
 // Interface
@@ -277,7 +281,7 @@ basic_aabb<T> get_bounds(basic_quad<T> const& t)
 
 template <typename T>
 VSNRAY_CPU_FUNC
-void split_primitive(aabb& L, aabb& R, float plane, int axis, snex::basic_quad<T> const& prim)
+void split_primitive(aabb& L, aabb& R, float plane, int axis, QUAD_NS::basic_quad<T> const& prim)
 {
     L.invalidate();
     R.invalidate();
@@ -302,7 +306,7 @@ VSNRAY_FUNC
 inline auto get_normal(
         Normals                     normals,
         HR const&                   hr,
-        snex::basic_quad<T>         prim,
+        QUAD_NS::basic_quad<T>      prim,
         per_vertex_binding          /* */
         )
     -> decltype( get_normal(hr, prim) )
@@ -317,7 +321,7 @@ VSNRAY_FUNC
 inline auto get_shading_normal(
         Normals                     normals,
         HR const&                   hr,
-        snex::basic_quad<T>         /* */,
+        QUAD_NS::basic_quad<T>      /* */,
         per_vertex_binding          /* */
         )
     -> typename std::iterator_traits<Normals>::value_type
@@ -368,22 +372,22 @@ namespace visionaray
 {
 
 template <typename T>
-struct num_vertices<snex::basic_quad<T>>
+struct num_vertices<QUAD_NS::basic_quad<T>>
 {
     enum { value = 4 };
 };
 template <typename T>
-struct num_normals<snex::basic_quad<T>, per_face_binding>
+struct num_normals<QUAD_NS::basic_quad<T>, per_face_binding>
 {
     enum { value = 1 };
 };
 template <typename T>
-struct num_normals<snex::basic_quad<T>, per_vertex_binding>
+struct num_normals<QUAD_NS::basic_quad<T>, per_vertex_binding>
 {
     enum { value = 4 };
 };
 template <typename T>
-struct num_tex_coords<snex::basic_quad<T>>
+struct num_tex_coords<QUAD_NS::basic_quad<T>>
 {
     enum { value = 4 };
 };
