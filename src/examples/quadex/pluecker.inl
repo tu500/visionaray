@@ -19,17 +19,23 @@ hit_record<R, primitive<unsigned>> intersect_pluecker(R const& ray, basic_quad<f
 
     hit_record<R, primitive<unsigned>> result;
 
-    vector<6, T> e1(quad.v1 - quad.v2, cross(quad.v1, quad.v2));
-    vector<6, T> e2(quad.v2 - quad.v3, cross(quad.v2, quad.v3));
-    vector<6, T> e3(quad.v3 - quad.v4, cross(quad.v3, quad.v4));
-    vector<6, T> e4(quad.v4 - quad.v1, cross(quad.v4, quad.v1));
-    vector<6, T> r(cross(ray.dir, ray.ori), ray.dir);
+    // vector<6, T> e1(quad.v1 - quad.v2, cross(quad.v1, quad.v2));
+    // vector<6, T> e2(quad.v2 - quad.v3, cross(quad.v2, quad.v3));
+    // vector<6, T> e3(quad.v3 - quad.v4, cross(quad.v3, quad.v4));
+    // vector<6, T> e4(quad.v4 - quad.v1, cross(quad.v4, quad.v1));
+    // vector<6, T> r(cross(ray.dir, ray.ori), ray.dir);
 
-    // vector<3, T> e1(cross(vector<3,T>(quad.v1 - quad.v2), vector<3,T>(quad.v2) - ray.ori));
-    // vector<3, T> e2(cross(vector<3,T>(quad.v2 - quad.v3), vector<3,T>(quad.v3) - ray.ori));
-    // vector<3, T> e3(cross(vector<3,T>(quad.v3 - quad.v4), vector<3,T>(quad.v4) - ray.ori));
-    // vector<3, T> e4(cross(vector<3,T>(quad.v4 - quad.v1), vector<3,T>(quad.v1) - ray.ori));
-    // vector<3, T> r(ray.dir);
+    // load only once
+    V quad_v1(quad.v1);
+    V quad_v2(quad.v2);
+    V quad_v3(quad.v3);
+    V quad_v4(quad.v4);
+
+    vector<3, T> e1(cross(quad_v1 - quad_v2, quad_v2 - ray.ori));
+    vector<3, T> e2(cross(quad_v2 - quad_v3, quad_v3 - ray.ori));
+    vector<3, T> e3(cross(quad_v3 - quad_v4, quad_v4 - ray.ori));
+    vector<3, T> e4(cross(quad_v4 - quad_v1, quad_v1 - ray.ori));
+    vector<3, T> r(ray.dir);
 
 
     T s1 = copysign(T(1.0), dot(e1, r));
@@ -41,9 +47,9 @@ hit_record<R, primitive<unsigned>> intersect_pluecker(R const& ray, basic_quad<f
 
     if (any(result.hit))
     {
-        V v1(quad.v1);
-        V e1(quad.v2 - quad.v1);
-        V e2(quad.v3 - quad.v2);
+        V v1(quad_v1);
+        V e1(quad_v2 - quad_v1);
+        V e2(quad_v3 - quad_v2);
 
         V n = normalize(cross(e1, e2));
 
@@ -63,17 +69,17 @@ hit_record<R, primitive<unsigned>> intersect_pluecker(R const& ray, basic_quad<f
         result.u = uv.x;
         result.v = uv.y;
 
-        if (all(result.hit) && any( result.hit && (
-                    uv.x < -0.1 || uv.x > 1.1 ||
-                    uv.y < -0.1 || uv.y > 1.1
-                    )))
-        {
-            std::stringstream ss;
-            ss << result.hit << std::endl;
-            ss << uv.x << std::endl;
-            ss << uv.y << std::endl;
-            std::cout << ss.str() << std::endl;
-        }
+        //if (all(result.hit) && any( result.hit && (
+        //            uv.x < -0.1 || uv.x > 1.1 ||
+        //            uv.y < -0.1 || uv.y > 1.1
+        //            )))
+        //{
+        //    std::stringstream ss;
+        //    ss << result.hit << std::endl;
+        //    ss << uv.x << std::endl;
+        //    ss << uv.y << std::endl;
+        //    std::cout << ss.str() << std::endl;
+        //}
 #endif
     }
 

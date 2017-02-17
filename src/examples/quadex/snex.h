@@ -182,48 +182,51 @@ inline hit_record<basic_ray<T>, primitive<unsigned>> intersect_opt(
     // (b1,b2) are (u,v)-coordinates (relative to the triangle (v1,e1,e2)) of
     // the intersection point - check if they lie inside quad
 
-    result.hit &= ( b2 <= ((v4.y-1.0) / v4.x) * b1 + 1.0 ) || v4.x == 0.0;
-    result.hit &= ( b1 <= ((v4.x-1.0) / v4.y) * b2 + 1.0 );
+    result.hit &= ( b2 <= ((v4.y-T(1.0)) / v4.x) * b1 + T(1.0) ) || v4.x == T(0.0);
+    result.hit &= ( b1 <= ((v4.x-T(1.0)) / v4.y) * b2 + T(1.0) );
 
     if ( !any(result.hit) )
     {
         return result;
     }
 
+#if CALCULATE_UV
     // now calculate bilinear coordinates relative to the quad
     T u, v;
 
     // special cases:
-    if (quad.v4.x == 1.0)
+    if (quad.v4.x == T(1.0))
     {
         u = b1;
-        v = b2 / (u * (v4.y - 1.0) + 1.0);
+        v = b2 / (u * (v4.y - T(1.0)) + T(1.0));
     }
-    else if (quad.v4.y == 1.0)
+    else if (quad.v4.y == T(1.0))
     {
         v = b2;
-        u = b1 / (v * (v4.x - 1.0) + 1.0);
+        u = b1 / (v * (v4.x - T(1.0)) + T(1.0));
     }
     else
     {
         // solve A*u^2 + B*u + C = 0
-        T A = -(v4.y - 1.0);
-        T B = b1 * (v4.y - 1.0) - b2 * (v4.x - 1.0) - 1.0;
+        T A = -(v4.y - T(1.0));
+        T B = b1 * (v4.y - T(1.0)) - b2 * (v4.x - T(1.0)) - T(1.0);
         T C = b1;
 
-        T D = B * B - 4.0 * A * C;
-        T Q = -0.5 * (B + copysign(sqrt(D), B));
+        T D = B * B - T(4.0) * A * C;
+        T Q = -T(0.5) * (B + copysign(sqrt(D), B));
 
         u = Q / A;
-        u = select(u < 0.0 || u > 1.0, C / Q, u);
-        v = b2 / (u * (v4.y - 1.0) + 1.0);
+        u = select(u < T(0.0) || u > T(1.0), C / Q, u);
+        v = b2 / (u * (v4.y - T(1.0)) + T(1.0));
     }
+
+    result.u = u;
+    result.v = v;
+#endif
 
     result.prim_id = quad.prim_id;
     result.geom_id = quad.geom_id;
     result.t = dot(e2, s2) * inv_div;
-    result.u = u;
-    result.v = v;
     return result;
 
 }
