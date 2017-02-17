@@ -1,6 +1,8 @@
 // This file is distributed under the MIT license.
 // See the LICENSE file for details.
 
+#include <iostream>
+
 #include <cstring> // memset
 #include <memory>
 #include <random>
@@ -105,9 +107,8 @@ struct benchmark
 
     //const unsigned int quad_count = 100000;
     //const unsigned int ray_count = (1<<18);
-    const unsigned int quad_count = 10000;
-    //const unsigned int ray_count = (1<<16);
-    const unsigned int ray_count = (1<<16);
+    const unsigned int quad_count = 100000;
+    const unsigned int ray_count = (1<<18);
 
 
     typedef std::default_random_engine rand_engine;
@@ -275,6 +276,8 @@ struct benchmark
             return t.elapsed();
         }
 #endif
+
+        return 0;
     }
 
 #ifdef __CUDACC__
@@ -464,6 +467,7 @@ int main(int argc, char** argv)
     std::cout << "Median:      " << times[bench_runs / 2] << " ms\n";
     std::cout << "Max:         " << times.back() << " ms\n";
     std::cout << "Min:         " << times[0] << " ms\n";
+    std::cout << std::endl;
 
     return 0;
 }
