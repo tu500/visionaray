@@ -57,15 +57,16 @@ struct renderer : viewer_type
 
 #ifdef __CUDACC__
     using ray_type_gpu              = basic_ray<float>;
-    using device_render_target_type = pixel_unpack_buffer_rt<PF_RGBA32F, PF_UNSPECIFIED>;
+    //using device_render_target_type = pixel_unpack_buffer_rt<PF_RGBA32F, PF_UNSPECIFIED>;
+    using device_render_target_type = gpu_buffer_rt<PF_RGBA32F, PF_UNSPECIFIED>;
     using device_bvh_type           = cuda_index_bvh<quad_type>;
     using device_tex_type           = cuda_texture<vector<4, unorm<8>>, 2>;
     using device_tex_ref_type       = typename device_tex_type::ref_type;
 #endif
 
     renderer()
-        : viewer_type(512, 512, "Visionaray Custom Intersector Example")
-        , bbox({ -1.0f, -1.0f, -1.0f }, { 1.0f, 1.0f, 1.0f })
+        : //viewer_type(512, 512, "Visionaray Custom Intersector Example")
+         bbox({ -1.0f, -1.0f, -1.0f }, { 1.0f, 1.0f, 1.0f })
         , host_sched(8)
 #ifdef __CUDACC__
         , device_sched(8, 8)
@@ -233,27 +234,27 @@ void renderer::on_display()
     if (render_gpu)
     {
 #ifdef __CUDACC__
-        // thrust::device_vector<renderer::device_bvh_type::bvh_ref> device_primitives;
-        //
-        // device_primitives.push_back(device_bvh.ref());
-        //
-        // thrust::device_vector<point_light<float>> device_lights = lights;
-        //
-        // auto kparams = make_kernel_params(
-        //         normals_per_vertex_binding{},
-        //         thrust::raw_pointer_cast(device_primitives.data()),
-        //         thrust::raw_pointer_cast(device_primitives.data()) + device_primitives.size(),
-        //         thrust::raw_pointer_cast(device_normals.data()),
-        //         thrust::raw_pointer_cast(device_materials.data()),
-        //         thrust::raw_pointer_cast(device_lights.data()),
-        //         thrust::raw_pointer_cast(device_lights.data()) + device_lights.size(),
-        //         3,
-        //         1E-3f,
-        //         vec4(background_color(), 1.0f),
-        //         vec4(1.0f)
-        //         );
-        //
-        // call_kernel( Simple, device_sched, kparams, frame_num, cam, device_rt );
+        thrust::device_vector<renderer::device_bvh_type::bvh_ref> device_primitives;
+
+        device_primitives.push_back(device_bvh.ref());
+
+        thrust::device_vector<point_light<float>> device_lights = lights;
+
+        auto kparams = make_kernel_params(
+                normals_per_vertex_binding{},
+                thrust::raw_pointer_cast(device_primitives.data()),
+                thrust::raw_pointer_cast(device_primitives.data()) + device_primitives.size(),
+                thrust::raw_pointer_cast(device_normals.data()),
+                thrust::raw_pointer_cast(device_materials.data()),
+                thrust::raw_pointer_cast(device_lights.data()),
+                thrust::raw_pointer_cast(device_lights.data()) + device_lights.size(),
+                3,
+                1E-3f,
+                vec4(background_color(), 1.0f),
+                vec4(1.0f)
+                );
+
+        call_kernel( Simple, device_sched, kparams, frame_num, cam, device_rt );
 #endif
     }
     else
@@ -398,8 +399,8 @@ void renderer::init_device_data()
     try
     {
         device_bvh = device_bvh_type(bvh);
-        device_normals = normals;
-        device_materials = materials;
+        device_normals = thrust::device_vector<vec3>(normals);
+        device_materials = thrust::device_vector<plastic<float>>(materials);
     }
     catch (std::bad_alloc&)
     {
@@ -418,10 +419,34 @@ void renderer::init_device_data()
 // Main function, performs initialization
 //
 
+//#include <cuda_gl_interop.h>
 int main(int argc, char** argv)
 {
+    // cudaError_t err = cudaSuccess;
+    // int dev = 0;
+    // cudaDeviceProp prop;
+    // err = cudaChooseDevice(&dev, &prop);
+    // if (err != cudaSuccess)
+    // {
+    //     throw std::runtime_error("choose device");
+    // }
+    // err = cudaGLSetGLDevice(dev);
+    // if (err==cudaErrorSetOnActiveProcess)
+    // {
+    //     err = cudaDeviceReset();
+    //     err = cudaGLSetGLDevice(dev);
+    // }
+    // if (err != cudaSuccess)
+    // {
+    //     throw std::runtime_error("set GL device");
+    // }
     renderer rend;
-    return;
+    // //rend.init_device_data();
+    // std::vector<vec3> t2;
+    // t2.push_back(vec3(1.f,2.f,3.f));
+    // thrust::device_vector<vec3> t;
+    // t = thrust::device_vector<vec3>(t2);
+    //return;
 
     try
     {
