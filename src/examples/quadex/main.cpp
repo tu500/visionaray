@@ -297,6 +297,12 @@ struct benchmark
         dim3 block_size(cuda_block_size);
         dim3 grid_size(div_up(ray_count, block_size.x));
 
+        // int min_block_size;
+        // int min_grid_size;
+        //
+        // cudaOccupancyMaxPotentialBlockSize(&min_grid_size, &min_block_size, cuda_kernel<quad_intersector_pluecker, quad_type, ray_type>, 0, 0);
+        // std::cout << min_block_size << std::endl << min_grid_size << std::endl;
+
         if (name_ == "opt")
         {
             cuda::timer t;
