@@ -17,7 +17,9 @@
 #include <visionaray/math/math.h>
 #include <visionaray/intersector.h>
 
-#define CALCULATE_UV 0
+#ifndef CALCULATE_UV
+#define CALCULATE_UV 1
+#endif
 
 #include "util.inl"
 
