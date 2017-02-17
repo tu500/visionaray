@@ -70,14 +70,15 @@ basic_quad<T> make_quad(
 #ifdef __CUDACC__
 template
 <typename Intersector, typename quad_type, typename ray_type>
-__global__ void cuda_kernel(ray_type *rays, unsigned int ray_count, quad_type *first, quad_type *last)
+__global__ void cuda_kernel(ray_type *rays, unsigned int ray_count, quad_type *first, quad_type *last, float *output_ts)
 {
     Intersector i;
     auto index = blockIdx.x * blockDim.x + threadIdx.x;
     if (index < ray_count)
     {
         ray_type r = rays[index];
-        volatile auto hr = closest_hit(r, first, last, i);
+        auto hr = closest_hit(r, first, last, i);
+        output_ts[index] = hr.t;
     }
 }
 #endif
@@ -285,11 +286,15 @@ struct benchmark
     thrust::device_vector<quad_type_opt> d_quads_opt;
     thrust::device_vector<ray_type> d_rays;
 
+    thrust::device_vector<float> output_ts;
+
     void init_device_data()
     {
         d_quads = thrust::device_vector<quad_type>(quads);
         d_rays = thrust::device_vector<ray_type>(rays);
         d_quads_opt = thrust::device_vector<quad_type_opt>(quads_opt);
+
+        output_ts = thrust::device_vector<float>(rays.size());
     }
 
     double run_cuda_test()
@@ -311,7 +316,8 @@ struct benchmark
                     thrust::raw_pointer_cast(d_rays.data()),
                     ray_count,
                     thrust::raw_pointer_cast(d_quads_opt.data()),
-                    thrust::raw_pointer_cast(d_quads_opt.data()) + d_quads_opt.size()
+                    thrust::raw_pointer_cast(d_quads_opt.data()) + d_quads_opt.size(),
+                    thrust::raw_pointer_cast(output_ts.data())
                     );
 
             return t.elapsed();
@@ -324,7 +330,8 @@ struct benchmark
                     thrust::raw_pointer_cast(d_rays.data()),
                     ray_count,
                     thrust::raw_pointer_cast(d_quads.data()),
-                    thrust::raw_pointer_cast(d_quads.data()) + d_quads.size()
+                    thrust::raw_pointer_cast(d_quads.data()) + d_quads.size(),
+                    thrust::raw_pointer_cast(output_ts.data())
                     );
 
             return t.elapsed();
@@ -337,7 +344,8 @@ struct benchmark
                     thrust::raw_pointer_cast(d_rays.data()),
                     ray_count,
                     thrust::raw_pointer_cast(d_quads.data()),
-                    thrust::raw_pointer_cast(d_quads.data()) + d_quads.size()
+                    thrust::raw_pointer_cast(d_quads.data()) + d_quads.size(),
+                    thrust::raw_pointer_cast(output_ts.data())
                     );
 
             return t.elapsed();
@@ -350,7 +358,8 @@ struct benchmark
                     thrust::raw_pointer_cast(d_rays.data()),
                     ray_count,
                     thrust::raw_pointer_cast(d_quads.data()),
-                    thrust::raw_pointer_cast(d_quads.data()) + d_quads.size()
+                    thrust::raw_pointer_cast(d_quads.data()) + d_quads.size(),
+                    thrust::raw_pointer_cast(output_ts.data())
                     );
 
             return t.elapsed();
@@ -363,7 +372,8 @@ struct benchmark
                     thrust::raw_pointer_cast(d_rays.data()),
                     ray_count,
                     thrust::raw_pointer_cast(d_quads.data()),
-                    thrust::raw_pointer_cast(d_quads.data()) + d_quads.size()
+                    thrust::raw_pointer_cast(d_quads.data()) + d_quads.size(),
+                    thrust::raw_pointer_cast(output_ts.data())
                     );
 
             return t.elapsed();
