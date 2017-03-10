@@ -209,8 +209,8 @@ hit_record<R, primitive<unsigned>> intersect_project_2D(R const& ray, basic_quad
     num_intersections += intersect(ip_2, L(v4_2, v1_2));
 
     result.hit &= num_intersections == 1;
-    result.prim_id = quad.prim_id;
-    result.geom_id = quad.geom_id;
+    // result.prim_id = quad.prim_id;
+    // result.geom_id = quad.geom_id;
     result.isect_pos = isect_pos;
 
 #if CALCULATE_UV

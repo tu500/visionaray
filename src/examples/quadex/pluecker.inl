@@ -61,8 +61,8 @@ hit_record<R, primitive<unsigned>> intersect_pluecker(R const& ray, basic_quad<f
                 dot(v1 - ray.ori, n) / div,
                 result.t
                 );
-        result.prim_id = quad.prim_id;
-        result.geom_id = quad.geom_id;
+        // result.prim_id = quad.prim_id;
+        // result.geom_id = quad.geom_id;
         result.isect_pos = ray.ori + ray.dir * result.t;
 #if CALCULATE_UV
         V2 uv = get_uv(quad, result.isect_pos);

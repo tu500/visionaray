@@ -13,7 +13,7 @@ namespace QUAD_NS
 {
 
 template <typename T>
-class quad_prim : public visionaray::primitive<unsigned>
+class quad_prim //: public visionaray::primitive<unsigned>
 {
 public:
 
@@ -224,14 +224,24 @@ inline hit_record<basic_ray<T>, primitive<unsigned>> intersect_opt(
     result.v = v;
 #endif
 
-    result.prim_id = quad.prim_id;
-    result.geom_id = quad.geom_id;
+    // result.prim_id = quad.prim_id;
+    // result.geom_id = quad.geom_id;
     result.t = dot(e2, s2) * inv_div;
     return result;
 
 }
 
 } // detail
+
+template <typename T, typename U>
+MATH_FUNC
+inline hit_record<basic_ray<T>, primitive<unsigned>> intersect(
+        basic_ray<T> const&                     ray,
+        QUAD_NS::quad_prim<U> const&               quad
+        )
+{
+    return detail::intersect_opt(ray, quad);
+}
 
 struct quad_intersector_opt : basic_intersector<quad_intersector_opt>
 {

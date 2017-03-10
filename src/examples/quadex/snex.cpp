@@ -35,15 +35,19 @@
 //#define QUAD_NS snex
 #define QUAD_NS visionaray
 
+#define CALCULATE_UV 1
+
 #include "basic_quad.h"
+#include "swoop.h"
 #include "snex.h"
 
 using namespace visionaray;
 
 using viewer_type = viewer_glut;
 
-//using quad_type = QUAD_NS::quad_prim<float>;
-using quad_type = QUAD_NS::basic_quad<float>;
+// using quad_type = QUAD_NS::basic_quad<float>;
+// using quad_type = QUAD_NS::quad_prim<float>;
+using quad_type = QUAD_NS::swoop_quad<float>;
 
 
 //-------------------------------------------------------------------------------------------------
@@ -167,6 +171,17 @@ struct renderer : viewer_type
                 normals.push_back(xy_pos2 * radius2 - z_pos2);
             }
         }
+
+        // quads.clear();
+        // normals.clear();
+        // quad_type s = quad_type::make_quad(
+        //         vec3(2, 2, 2),
+        //         vec3(2, 2, 3),
+        //         vec3(1, 2, 3),
+        //         vec3(1, 2, 2)
+        //     );
+        // quads.push_back(s);
+        // normals.push_back(vec3(0, -1, 0));
 
         plastic<float> m;
         m.set_ca( from_rgb(0.0f, 0.0f, 0.0f) );

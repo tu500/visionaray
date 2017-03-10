@@ -33,7 +33,7 @@ using namespace visionaray;
 //
 
 template <typename T>
-struct basic_quad : primitive<unsigned>
+struct basic_quad //: primitive<unsigned>
 {
     vector<3, T> v1;
     vector<3, T> v2;

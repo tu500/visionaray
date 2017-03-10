@@ -41,6 +41,7 @@
 #define QUAD_NS visionaray
 
 #include "basic_quad.h"
+#include "swoop.h"
 #include "snex.h"
 
 using namespace visionaray;
@@ -61,8 +62,8 @@ basic_quad<T> make_quad(
     q.v2 = v2;
     q.v3 = v3;
     q.v4 = v4;
-    q.prim_id = 0;
-    q.geom_id = 0;
+    // q.prim_id = 0;
+    // q.geom_id = 0;
     return q;
 }
 
@@ -87,16 +88,18 @@ struct benchmark
 {
     typedef basic_quad<float> quad_type;
     typedef quad_prim<float> quad_type_opt;
+    typedef swoop_quad<float> quad_type_swoop;
     typedef basic_ray<float> ray_type;
 
     aligned_vector<quad_type_opt, 32> quads_opt;
+    aligned_vector<quad_type_swoop, 32> quads_swoop;
     aligned_vector<quad_type, 32> quads;
     aligned_vector<ray_type, 32> rays;
 
-#if VSNRAY_SIMD_ISA >= VSNRAY_SIMD_ISA_SSE
+#if VSNRAY_SIMD_ISA_GE(VSNRAY_SIMD_ISA_SSE)
     aligned_vector<basic_ray<simd::float4>, 32> rays_cpu4;
 #endif
-#if VSNRAY_SIMD_ISA >= VSNRAY_SIMD_ISA_AVX
+#if VSNRAY_SIMD_ISA_GE(VSNRAY_SIMD_ISA_AVX)
     aligned_vector<basic_ray<simd::float8>, 32> rays_cpu8;
 #endif
 
@@ -108,8 +111,10 @@ struct benchmark
 
     //const unsigned int quad_count = 100000;
     //const unsigned int ray_count = (1<<18);
-    const unsigned int quad_count = 100000;
-    const unsigned int ray_count = (1<<18);
+    // const unsigned int quad_count = 100000;
+    // const unsigned int ray_count = (1<<18);
+    const unsigned int quad_count = 1000;
+    const unsigned int ray_count = (1<<14);
 
 
     typedef std::default_random_engine rand_engine;
@@ -120,9 +125,9 @@ struct benchmark
 
     benchmark(std::string name, bool cuda_test)
         : name_(name)
+        , cuda_test(cuda_test)
         , rng(0)
         , dist(0, 1)
-        , cuda_test(cuda_test)
     {
         generate_quads();
         generate_rays();
@@ -150,6 +155,13 @@ struct benchmark
 
 
             quads_opt.push_back(quad_type_opt::make_quad(
+                    u * dist(rng) + center,
+                    v * dist(rng) + center,
+                    -u * dist(rng) + center,
+                    -v * dist(rng) + center
+                    ));
+
+            quads_swoop.push_back(quad_type_swoop::make_quad(
                     u * dist(rng) + center,
                     v * dist(rng) + center,
                     -u * dist(rng) + center,
@@ -196,10 +208,10 @@ struct benchmark
 
     void init()
     {
-#if VSNRAY_SIMD_ISA >= VSNRAY_SIMD_ISA_SSE
+#if VSNRAY_SIMD_ISA_GE(VSNRAY_SIMD_ISA_SSE)
         pack_rays(rays_cpu4, rays);
 #endif
-#if VSNRAY_SIMD_ISA >= VSNRAY_SIMD_ISA_AVX
+#if VSNRAY_SIMD_ISA_GE(VSNRAY_SIMD_ISA_AVX)
         pack_rays(rays_cpu8, rays);
 #endif
 
@@ -223,6 +235,8 @@ struct benchmark
                 return run_test<quad_intersector_project_2D>(quads);
             if (name_ == "uv")
                 return run_test<quad_intersector_uv>(quads);
+            if (name_ == "swoop")
+                return run_test<quad_intersector_swoop>(quads_swoop);
         }
         else
         {
@@ -250,7 +264,7 @@ struct benchmark
             return t.elapsed();
         }
 
-#if VSNRAY_SIMD_ISA >= VSNRAY_SIMD_ISA_SSE && !defined(__CUDA_ARCH__)
+#if VSNRAY_SIMD_ISA_GE(VSNRAY_SIMD_ISA_SSE) && !defined(__CUDA_ARCH__)
         else if (cpu_packet_size == 4)
         {
            timer t;
@@ -264,7 +278,7 @@ struct benchmark
         }
 #endif
 
-#if VSNRAY_SIMD_ISA >= VSNRAY_SIMD_ISA_AVX && !defined(__CUDA_ARCH__)
+#if VSNRAY_SIMD_ISA_GE(VSNRAY_SIMD_ISA_AVX) && !defined(__CUDA_ARCH__)
         else if (cpu_packet_size == 8)
         {
             timer t;
@@ -284,6 +298,7 @@ struct benchmark
 #ifdef __CUDACC__
     thrust::device_vector<quad_type> d_quads;
     thrust::device_vector<quad_type_opt> d_quads_opt;
+    thrust::device_vector<quad_type_swoop> d_quads_swoop;
     thrust::device_vector<ray_type> d_rays;
 
     thrust::device_vector<float> output_ts;
@@ -293,6 +308,7 @@ struct benchmark
         d_quads = thrust::device_vector<quad_type>(quads);
         d_rays = thrust::device_vector<ray_type>(rays);
         d_quads_opt = thrust::device_vector<quad_type_opt>(quads_opt);
+        d_quads_swoop = thrust::device_vector<quad_type_swoop>(quads_swoop);
 
         output_ts = thrust::device_vector<float>(rays.size());
     }
@@ -373,6 +389,20 @@ struct benchmark
                     ray_count,
                     thrust::raw_pointer_cast(d_quads.data()),
                     thrust::raw_pointer_cast(d_quads.data()) + d_quads.size(),
+                    thrust::raw_pointer_cast(output_ts.data())
+                    );
+
+            return t.elapsed();
+        }
+        else if (name_ == "swoop")
+        {
+            cuda::timer t;
+
+            cuda_kernel<quad_intersector_swoop> <<<grid_size, block_size>>> (
+                    thrust::raw_pointer_cast(d_rays.data()),
+                    ray_count,
+                    thrust::raw_pointer_cast(d_quads_swoop.data()),
+                    thrust::raw_pointer_cast(d_quads_swoop.data()) + d_quads_swoop.size(),
                     thrust::raw_pointer_cast(output_ts.data())
                     );
 

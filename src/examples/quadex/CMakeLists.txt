@@ -11,7 +11,7 @@ endif()
 
 ### QUADEX ###
 
-if(CUDA_FOUND AND VSNRAY_ENABLE_CUDA AND 1)
+if(CUDA_FOUND AND VSNRAY_ENABLE_CUDA AND 0)
     visionaray_cuda_compile(EX_QUAD_CUDA_SOURCES
         main.cu
     )

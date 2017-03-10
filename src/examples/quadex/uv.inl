@@ -50,8 +50,8 @@ hit_record<R, primitive<unsigned>> intersect_uv(R const& ray, basic_quad<float> 
 
     //result.hit = uv.x >= T(0.) && uv.x <= T(1.) && uv.y >= T(0.) && uv.y <= T(0.99999);
 
-    result.prim_id = quad.prim_id;
-    result.geom_id = quad.geom_id;
+    // result.prim_id = quad.prim_id;
+    // result.geom_id = quad.geom_id;
     result.isect_pos = isect_pos;
     result.u = uv.x;
     result.v = uv.y;

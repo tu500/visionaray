@@ -121,8 +121,8 @@ inline hit_record<basic_ray<T>, primitive<unsigned>> intersect_mt_bl_uv(
     result.v = v;
 #endif
 
-    result.prim_id = quad.prim_id;
-    result.geom_id = quad.geom_id;
+    // result.prim_id = quad.prim_id;
+    // result.geom_id = quad.geom_id;
     result.t = dot(e2, s2) * inv_div;
     return result;
 
